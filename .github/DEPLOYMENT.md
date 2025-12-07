@@ -110,19 +110,30 @@ You can also trigger deployment manually:
 # 1. Install Docker and Docker Compose
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
-sudo usermod -aG docker $USER
 
-# 2. Clone the repository
+# 2. Add user to docker group (optional - if not using sudo)
+sudo usermod -aG docker $USER
+# Note: You need to log out and back in for this to take effect
+
+# 3. Configure sudo to allow docker commands without password
+sudo visudo
+# Add this line at the end (replace 'username' with your SSH username):
+# username ALL=(ALL) NOPASSWD: /usr/bin/docker, /usr/local/bin/docker-compose, /usr/bin/docker-compose
+
+# 4. Clone the repository
 cd /home/ubuntu
 git clone https://github.com/your-username/your-repo.git 280-new-3
 cd 280-new-3
 
-# 3. Create .env file with your configuration
+# 5. Fix git ownership (if needed)
+git config --global --add safe.directory /home/ubuntu/280-new-3
+
+# 6. Create .env file with your configuration
 cp .env.example .env
 nano .env
 
-# 4. Initial deployment
-docker compose up -d
+# 7. Initial deployment
+sudo docker compose up -d
 ```
 
 ## Monitoring Deployments
