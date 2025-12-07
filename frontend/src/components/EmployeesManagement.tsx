@@ -387,7 +387,7 @@ export function EmployeesManagement() {
   );
 }
 
-// Add User Modal Component
+// Add User Modal Component - Updated with password field
 function AddUserModal({
   branches,
   onClose,
@@ -398,8 +398,8 @@ function AddUserModal({
   onSuccess: () => void;
 }) {
   const [formData, setFormData] = useState({
-    googleId: '',
     email: '',
+    password: '',
     name: '',
     picture: '',
     branchId: null as number | null,
@@ -422,16 +422,6 @@ function AddUserModal({
         <h3 className="text-xl font-bold mb-4">הוסף עובד חדש</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Google ID</label>
-            <input
-              type="text"
-              value={formData.googleId}
-              onChange={(e) => setFormData({ ...formData, googleId: e.target.value })}
-              className="input"
-              required
-            />
-          </div>
-          <div>
             <label className="label">אימייל</label>
             <input
               type="email"
@@ -439,6 +429,20 @@ function AddUserModal({
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="input"
               required
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="label">סיסמה</label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="input"
+              required
+              minLength={6}
+              dir="ltr"
+              placeholder="לפחות 6 תווים"
             />
           </div>
           <div>

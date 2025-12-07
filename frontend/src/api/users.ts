@@ -18,8 +18,8 @@ export const usersApi = {
   },
 
   create: async (data: {
-    googleId: string;
     email: string;
+    password: string;
     name: string;
     picture?: string;
     branchId?: number | null;

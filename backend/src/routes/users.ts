@@ -75,39 +75,34 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create user (from Google OAuth)
+// Create user
 router.post('/', async (req, res) => {
   try {
     const data = userCreateSchema.parse(req.body);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { googleId: data.googleId },
+      where: { email: data.email },
     });
 
     if (existingUser) {
-      // Update last login
-      const updatedUser = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: { lastLoginAt: new Date() },
-        include: { branch: true },
-      });
-
-      await createAuditLog({
-        userId: updatedUser.id,
-        action: 'login',
-        entityType: 'user',
-        entityId: updatedUser.id,
-        description: 'User logged in',
-      });
-
-      return res.json(updatedUser);
+      return res.status(400).json({ error: 'User with this email already exists' });
     }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
     // Create new user
     const user = await prisma.user.create({
       data: {
-        ...data,
+        email: data.email,
+        password: hashedPassword,
+        name: data.name,
+        picture: data.picture,
+        branchId: data.branchId,
+        role: data.role || 'employee',
+        isActive: true,
+        isApproved: true, // Auto-approve admin-created users
         lastLoginAt: new Date(),
       },
       include: {
@@ -123,7 +118,9 @@ router.post('/', async (req, res) => {
       description: `User created: ${user.name}`,
     });
 
-    res.status(201).json(user);
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(201).json(userWithoutPassword);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
