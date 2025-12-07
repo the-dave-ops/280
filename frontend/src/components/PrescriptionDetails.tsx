@@ -133,9 +133,18 @@ export function PrescriptionDetails({
     setFormData(prescription);
   }, [prescription]);
 
+  // Check if this is a new prescription (no ID yet)
+  const isNewPrescription = !prescription.id;
+
   const updateMutation = useMutation({
-    mutationFn: (data: Partial<Prescription>) =>
-      prescriptionsApi.update(prescription.id, data),
+    mutationFn: (data: Partial<Prescription>) => {
+      // If it's a new prescription, use create API, otherwise use update API
+      if (!prescription.id) {
+        return prescriptionsApi.create(data);
+      } else {
+        return prescriptionsApi.update(prescription.id, data);
+      }
+    },
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
       onUpdate(updated);
@@ -180,7 +189,13 @@ export function PrescriptionDetails({
   };
 
   const duplicateMutation = useMutation({
-    mutationFn: () => prescriptionsApi.duplicate(prescription.id),
+    mutationFn: () => {
+      // Can't duplicate a prescription that doesn't exist yet
+      if (!prescription.id) {
+        throw new Error('Cannot duplicate an unsaved prescription');
+      }
+      return prescriptionsApi.duplicate(prescription.id);
+    },
     onSuccess: (duplicatedPrescription) => {
       queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
       // Update to show the new duplicated prescription
@@ -239,7 +254,13 @@ export function PrescriptionDetails({
   });
 
   const convertMutation = useMutation({
-    mutationFn: () => prescriptionsApi.convertToReading(prescription.id),
+    mutationFn: () => {
+      // Can't convert a prescription that doesn't exist yet
+      if (!prescription.id) {
+        throw new Error('Cannot convert an unsaved prescription');
+      }
+      return prescriptionsApi.convertToReading(prescription.id);
+    },
     onSuccess: (newPrescription) => {
       queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -249,7 +270,13 @@ export function PrescriptionDetails({
   });
 
   const generatePdfMutation = useMutation({
-    mutationFn: () => prescriptionsApi.generatePdf(prescription.id),
+    mutationFn: () => {
+      // Can't generate PDF for a prescription that doesn't exist yet
+      if (!prescription.id) {
+        throw new Error('Cannot generate PDF for an unsaved prescription');
+      }
+      return prescriptionsApi.generatePdf(prescription.id);
+    },
     onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
