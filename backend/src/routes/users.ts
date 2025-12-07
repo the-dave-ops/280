@@ -20,6 +20,7 @@ const userCreateSchema = z.object({
 const userUpdateSchema = z.object({
   name: z.string().optional(),
   picture: z.string().optional(),
+  password: z.string().min(6, 'סיסמה חייבת להכיל לפחות 6 תווים').optional(),
   isActive: z.boolean().optional(),
   isApproved: z.boolean().optional(),
   branchId: z.number().optional().nullable(),
@@ -136,9 +137,15 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const data = userUpdateSchema.parse(req.body);
 
+    // Hash password if provided
+    const updateData: any = { ...data };
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
     const user = await prisma.user.update({
       where: { id: parseInt(id) },
-      data,
+      data: updateData,
       include: {
         branch: true,
       },

@@ -538,6 +538,7 @@ function EditUserModal({
   const [formData, setFormData] = useState({
     name: user.name,
     picture: user.picture || '',
+    password: '', // Optional - only update if provided
     isActive: user.isActive,
     branchId: user.branchId,
     role: user.role,
@@ -575,6 +576,18 @@ function EditUserModal({
               value={formData.picture}
               onChange={(e) => setFormData({ ...formData, picture: e.target.value })}
               className="input"
+            />
+          </div>
+          <div>
+            <label className="label">סיסמה חדשה (אופציונלי)</label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="input"
+              minLength={6}
+              dir="ltr"
+              placeholder="השאר ריק אם לא רוצה לשנות"
             />
           </div>
           <div>

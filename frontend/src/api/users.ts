@@ -32,12 +32,18 @@ export const usersApi = {
   update: async (id: number, data: {
     name?: string;
     picture?: string;
+    password?: string;
     isActive?: boolean;
     isApproved?: boolean;
     branchId?: number | null;
     role?: 'admin' | 'employee' | 'manager';
   }) => {
-    const response = await apiClient.put<User>(`/users/${id}`, data);
+    // Only send password if it's not empty
+    const updateData = { ...data };
+    if (!updateData.password) {
+      delete updateData.password;
+    }
+    const response = await apiClient.put<User>(`/users/${id}`, updateData);
     return response.data;
   },
 
