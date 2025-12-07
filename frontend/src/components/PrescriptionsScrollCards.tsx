@@ -118,10 +118,10 @@ export function PrescriptionsScrollCards({
                   <span className="font-medium text-xs">{prescription.l || '-'}</span>
                 </div>
                 {prescription.add && (
-                  <>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 border border-gray-300 rounded" dir="ltr">
                     <span className="text-gray-500 text-xs">ADD:</span>
-                    <span className="font-medium text-xs min-w-[30px] text-left">{prescription.add}</span>
-                  </>
+                    <span className="font-medium text-xs">{prescription.add}</span>
+                  </div>
                 )}
                 <div className="flex items-center gap-1 px-1.5 py-0.5 border border-gray-300 rounded" dir="ltr">
                   <span className="text-gray-500 text-xs">PD:</span>

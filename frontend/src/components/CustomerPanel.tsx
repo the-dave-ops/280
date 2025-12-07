@@ -19,6 +19,23 @@ const insuranceTypesByHealthFund: Record<string, string[]> = {
   'לאומית': ['רגיל', 'לאומית כסף', 'לאומית זהב', 'לאומית פלטינום'],
 };
 
+// Helper function to handle Enter key to move to next field
+const handleEnterKeyNavigation = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const focusableElements = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      )
+    );
+    const currentIndex = focusableElements.indexOf(e.currentTarget as HTMLElement);
+    const nextElement = focusableElements[currentIndex + 1];
+    if (nextElement) {
+      nextElement.focus();
+    }
+  }
+};
+
 interface CustomerPanelProps {
   customer: Customer;
   onUpdate: (customer: Customer) => void;
@@ -238,6 +255,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 type="text"
                 value={formData.firstName || ''}
                 onChange={(e) => handleChange('firstName', e.target.value)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
               />
@@ -252,6 +270,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 type="text"
                 value={formData.lastName || ''}
                 onChange={(e) => handleChange('lastName', e.target.value)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
               />
@@ -269,6 +288,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 type="text"
                 value={formData.idNumber || ''}
                 onChange={(e) => handleChange('idNumber', e.target.value)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="ltr"
               />
@@ -287,6 +307,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                       : format(new Date(formData.birthDate), 'yyyy-MM-dd'))
                   : ''}
                 onChange={(e) => handleChange('birthDate', e.target.value || null)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="ltr"
               />
@@ -311,6 +332,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                   const cleaned = handlePhoneInput(e.target.value);
                   handleChange('phone', cleaned);
                 }}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="ltr"
               />
@@ -328,6 +350,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                   const cleaned = handlePhoneInput(e.target.value);
                   handleChange('mobile1', cleaned);
                 }}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="ltr"
               />
@@ -346,6 +369,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 placeholder="רחוב"
                 value={formData.street || ''}
                 onChange={(e) => handleChange('street', e.target.value)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
               />
@@ -355,6 +379,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                   placeholder="מספר בית"
                   value={formData.houseNumber || ''}
                   onChange={(e) => handleChange('houseNumber', e.target.value)}
+                  onKeyDown={handleEnterKeyNavigation}
                   className="input"
                   dir="ltr"
                 />
@@ -363,6 +388,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                   placeholder="כניסה"
                   value={formData.entrance || ''}
                   onChange={(e) => handleChange('entrance', e.target.value)}
+                  onKeyDown={handleEnterKeyNavigation}
                   className="input"
                   dir="ltr"
                 />
@@ -371,6 +397,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                   placeholder="דירה"
                   value={formData.apartment || ''}
                   onChange={(e) => handleChange('apartment', parseInt(e.target.value) || null)}
+                  onKeyDown={handleEnterKeyNavigation}
                   className="input"
                   dir="ltr"
                 />
@@ -378,6 +405,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
               <select
                 value={formData.city || ''}
                 onChange={(e) => handleChange('city', e.target.value || null)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
               >
@@ -405,6 +433,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
               <select
                 value={formData.healthFund || ''}
                 onChange={(e) => handleChange('healthFund', e.target.value || null)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
               >
@@ -425,6 +454,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
               <select
                 value={insuranceType}
                 onChange={(e) => setInsuranceType(e.target.value)}
+                onKeyDown={handleEnterKeyNavigation}
                 className="input"
                 dir="rtl"
                 disabled={!formData.healthFund && !customer.healthFund}
@@ -483,6 +513,7 @@ function BranchSelect({ value, onChange }: BranchSelectProps) {
     <select
       value={value || ''}
       onChange={(e) => onChange(e.target.value ? parseInt(e.target.value) : null)}
+      onKeyDown={handleEnterKeyNavigation}
       className="input"
       dir="rtl"
     >

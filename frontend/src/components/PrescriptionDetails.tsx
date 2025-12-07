@@ -50,6 +50,34 @@ const handleArrowKeyNavigation = (
   }
 };
 
+// Helper function to handle Enter key to move to next field
+const handleEnterKeyNavigation = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const form = e.currentTarget.form;
+    if (!form) {
+      // If not in a form, find all focusable elements in the document
+      const focusableElements = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+        )
+      );
+      const currentIndex = focusableElements.indexOf(e.currentTarget as HTMLElement);
+      const nextElement = focusableElements[currentIndex + 1];
+      if (nextElement) {
+        nextElement.focus();
+      }
+    } else {
+      const elements = Array.from(form.elements) as HTMLElement[];
+      const currentIndex = elements.indexOf(e.currentTarget as HTMLElement);
+      const nextElement = elements[currentIndex + 1] as HTMLElement;
+      if (nextElement && nextElement.focus) {
+        nextElement.focus();
+      }
+    }
+  }
+};
+
 interface PrescriptionDetailsProps {
   prescription: Prescription;
   customer: Customer;
@@ -359,6 +387,7 @@ export function PrescriptionDetails({
             <select
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
+              onKeyDown={handleEnterKeyNavigation}
               className="input text-base py-1.5 px-2 flex-1"
               dir="ltr"
             >
@@ -379,6 +408,7 @@ export function PrescriptionDetails({
             <textarea
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
+              onKeyDown={handleEnterKeyNavigation}
               className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
               dir="ltr"
               rows={1}
@@ -405,7 +435,12 @@ export function PrescriptionDetails({
                 type === 'number' ? (parseFloat(e.target.value) || null) : e.target.value || null
               )
             }
-            onKeyDown={navigationOptions ? (e) => handleArrowKeyNavigation(e, navigationOptions, value as string, (newValue) => handleChange(field, newValue)) : undefined}
+            onKeyDown={(e) => {
+              handleEnterKeyNavigation(e);
+              if (navigationOptions) {
+                handleArrowKeyNavigation(e, navigationOptions, value as string, (newValue) => handleChange(field, newValue));
+              }
+            }}
             className="input text-sm py-1.5 px-2 flex-1"
             dir="ltr"
           />
@@ -430,6 +465,7 @@ export function PrescriptionDetails({
             <select
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
+              onKeyDown={handleEnterKeyNavigation}
               className="input text-base py-1.5 px-2 flex-1"
               dir="rtl"
             >
@@ -450,6 +486,7 @@ export function PrescriptionDetails({
             <textarea
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
+              onKeyDown={handleEnterKeyNavigation}
               className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
               dir="rtl"
               rows={1}
@@ -463,13 +500,14 @@ export function PrescriptionDetails({
           <input
             type={type}
             step={step}
-            value={value || ''}
+            value={value || ''}  
             onChange={(e) =>
               handleChange(
                 field,
                 type === 'number' ? (parseFloat(e.target.value) || null) : e.target.value || null
               )
             }
+            onKeyDown={handleEnterKeyNavigation}
             className="input text-sm py-1.5 px-2 flex-1"
             dir="rtl"
           />
@@ -597,6 +635,7 @@ export function PrescriptionDetails({
             <select
               value={formData.type}
               onChange={(e) => handleChange('type', e.target.value)}
+              onKeyDown={handleEnterKeyNavigation}
               className="input text-base py-1.5 px-2"
               style={{ width: '150px' }}
             >
@@ -703,6 +742,7 @@ export function PrescriptionDetails({
               value={formData.amountToPay || ''}
               onChange={(e) => handleChange('amountToPay', parseFloat(e.target.value) || null)}
               onKeyDown={(e) => {
+                handleEnterKeyNavigation(e);
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                   e.preventDefault();
                   const currentValue = formData.amountToPay || 0;
@@ -723,6 +763,7 @@ export function PrescriptionDetails({
               value={formData.paid || ''}
               onChange={(e) => handleChange('paid', parseFloat(e.target.value) || null)}
               onKeyDown={(e) => {
+                handleEnterKeyNavigation(e);
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                   e.preventDefault();
                   const currentValue = formData.paid || 0;
