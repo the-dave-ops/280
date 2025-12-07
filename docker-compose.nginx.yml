@@ -1,0 +1,86 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: optometry-db
+    environment:
+      POSTGRES_USER: optometry_user
+      POSTGRES_PASSWORD: optometry_pass
+      POSTGRES_DB: optometry_user
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optometry_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - optometry-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: optometry-backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://optometry_user:optometry_pass@db:5432/optometry_user
+      PORT: 3001
+      FRONTEND_URL: https://280.kesef-kesef.com
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      SKIP_AUTH: ${SKIP_AUTH:-true}
+      ADMIN_DELETE_PASSWORD: ${ADMIN_DELETE_PASSWORD:-admin123}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "node wait-for-db.js && npx prisma migrate deploy && npx tsx scripts/setup-admin.ts && npm run dev"
+    networks:
+      - optometry-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: optometry-frontend
+    environment:
+      VITE_API_URL: https://api.280.kesef-kesef.com
+      VITE_ALLOWED_HOSTS: 280.kesef-kesef.com,localhost,.localhost
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    command: npm run dev
+    networks:
+      - optometry-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: optometry-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # For SSL certificates
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - optometry-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  optometry-network:
+    driver: bridge
