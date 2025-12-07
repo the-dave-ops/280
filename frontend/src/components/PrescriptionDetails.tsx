@@ -1,0 +1,773 @@
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { Trash2, Copy, FileDown, RotateCcw, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { prescriptionsApi } from '../api/prescriptions';
+import type { Prescription, Customer } from '../types';
+import { format } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
+
+const healthFunds = ['מאוחדת', 'מכבי', 'לאומית', 'כללית'];
+const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.74'];
+const colorOptions = ['שקוף', 'כחול', 'חום', 'אפור', 'ירוק', 'ורוד', 'סגול', 'צהוב'];
+
+// Insurance types mapping for each health fund
+const insuranceTypesByHealthFund: Record<string, string[]> = {
+  'כללית': ['רגיל', 'מושלם', 'מושלם זהב', 'מושלם פלטינום'],
+  'מכבי': ['רגיל', 'מכבי שלי', 'מכבי זהב', 'מכבי כסף'],
+  'מאוחדת': ['רגיל', 'מאוחדת עדיף', 'עדיף פלטינום'],
+  'לאומית': ['רגיל', 'לאומית כסף', 'לאומית זהב', 'לאומית פלטינום'],
+};
+
+// Helper function to handle arrow key navigation
+const handleArrowKeyNavigation = (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  options: string[],
+  currentValue: string | null | undefined,
+  onChange: (value: string) => void
+) => {
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    const currentIndex = currentValue ? options.indexOf(currentValue) : -1;
+    let newIndex: number;
+    
+    if (e.key === 'ArrowUp') {
+      // Arrow Up: go to previous, or wrap to last if at start or no current value
+      if (currentIndex <= 0) {
+        newIndex = options.length - 1;
+      } else {
+        newIndex = currentIndex - 1;
+      }
+    } else {
+      // Arrow Down: go to next, or start from first if at end or no current value
+      if (currentIndex >= options.length - 1 || currentIndex === -1) {
+        newIndex = 0;
+      } else {
+        newIndex = currentIndex + 1;
+      }
+    }
+    
+    onChange(options[newIndex]);
+  }
+};
+
+interface PrescriptionDetailsProps {
+  prescription: Prescription;
+  customer: Customer;
+  onUpdate: (prescription: Prescription) => void;
+  onClose: () => void;
+  onAddNew?: () => void;
+}
+
+export function PrescriptionDetails({
+  prescription,
+  customer,
+  onUpdate,
+  onClose,
+  onAddNew,
+}: PrescriptionDetailsProps) {
+  const [formData, setFormData] = useState<Partial<Prescription>>(prescription);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
+  // Get all prescriptions for this customer to enable navigation
+  const { data: allPrescriptions = [] } = useQuery({
+    queryKey: ['prescriptions', 'customer', customer.id],
+    queryFn: () => prescriptionsApi.getAll({ customerId: customer.id }),
+  });
+
+  // Sort prescriptions by date (newest first) and find current index
+  const sortedPrescriptions = useMemo(() => {
+    return [...allPrescriptions].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return dateB - dateA; // Newest first
+    });
+  }, [allPrescriptions]);
+
+  const currentIndex = useMemo(() => {
+    return sortedPrescriptions.findIndex(p => p.id === prescription.id);
+  }, [sortedPrescriptions, prescription.id]);
+
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex < sortedPrescriptions.length - 1 && currentIndex >= 0;
+
+  const handlePrevious = async () => {
+    if (hasPrevious && currentIndex > 0) {
+      const previousPrescription = sortedPrescriptions[currentIndex - 1];
+      // Fetch full prescription data to ensure all fields are loaded
+      try {
+        const fullPrescription = await prescriptionsApi.getById(previousPrescription.id);
+        onUpdate(fullPrescription);
+      } catch (error) {
+        console.error('Error fetching previous prescription:', error);
+        // Fallback to the prescription we have
+        onUpdate(previousPrescription);
+      }
+    }
+  };
+
+  const handleNext = async () => {
+    if (hasNext && currentIndex < sortedPrescriptions.length - 1) {
+      const nextPrescription = sortedPrescriptions[currentIndex + 1];
+      // Fetch full prescription data to ensure all fields are loaded
+      try {
+        const fullPrescription = await prescriptionsApi.getById(nextPrescription.id);
+        onUpdate(fullPrescription);
+      } catch (error) {
+        console.error('Error fetching next prescription:', error);
+        // Fallback to the prescription we have
+        onUpdate(nextPrescription);
+      }
+    }
+  };
+  
+  // Get available insurance types based on selected health fund
+  const availableInsuranceTypes = formData.healthFund 
+    ? insuranceTypesByHealthFund[formData.healthFund] || []
+    : [];
+
+  // Update formData when prescription prop changes
+  useEffect(() => {
+    setFormData(prescription);
+  }, [prescription]);
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Partial<Prescription>) =>
+      prescriptionsApi.update(prescription.id, data),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      onUpdate(updated);
+    },
+  });
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+
+  const verifyDeleteMutation = useMutation({
+    mutationFn: (password: string) => prescriptionsApi.verifyDelete(prescription.id, password),
+    onSuccess: () => {
+      // Password verified, proceed with deletion
+      deleteMutation.mutate();
+      setShowDeleteModal(false);
+      setDeletePassword('');
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.error || 'סיסמה שגויה');
+      setDeletePassword('');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => prescriptionsApi.delete(prescription.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      onClose();
+    },
+  });
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deletePassword) {
+      alert('נא להזין סיסמת מנהל');
+      return;
+    }
+    verifyDeleteMutation.mutate(deletePassword);
+  };
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => prescriptionsApi.duplicate(prescription.id),
+    onSuccess: (duplicatedPrescription) => {
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      // Update to show the new duplicated prescription
+      onUpdate(duplicatedPrescription);
+      // Update formData with new prescription data
+      setFormData(duplicatedPrescription);
+    },
+  });
+
+  const createNewPrescriptionMutation = useMutation({
+    mutationFn: () => prescriptionsApi.create({
+      customerId: customer.id,
+      type: 'מרחק',
+      date: new Date(),
+      // Keep same branch and optometrist as current prescription
+      branchId: prescription.branchId || undefined,
+      optometristId: prescription.optometristId || undefined,
+      // All other fields are null/empty
+      r: null,
+      l: null,
+      cylR: null,
+      axR: null,
+      cylL: null,
+      axL: null,
+      pd: null,
+      add: null,
+      index: null,
+      color: null,
+      colorPercentage: null,
+      frameName: null,
+      frameModel: null,
+      frameColor: null,
+      frameC: null,
+      frameWidth: null,
+      frameNotes: null,
+      healthFund: null,
+      insuranceType: null,
+      price: 0,
+      discountSource: null,
+      amountToPay: 0,
+      paid: 0,
+      balance: 0,
+      receiptNumber: null,
+      campaign280: false,
+      source: null,
+      notes: null,
+    }),
+    onSuccess: (newPrescription) => {
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Update to show the new prescription
+      onUpdate(newPrescription);
+      // Update formData with new prescription data
+      setFormData(newPrescription);
+    },
+  });
+
+  const convertMutation = useMutation({
+    mutationFn: () => prescriptionsApi.convertToReading(prescription.id),
+    onSuccess: (newPrescription) => {
+      queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Update to show the new converted prescription
+      onUpdate(newPrescription);
+    },
+  });
+
+  const generatePdfMutation = useMutation({
+    mutationFn: () => prescriptionsApi.generatePdf(prescription.id),
+    onSuccess: (blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `prescription_${prescription.id}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    },
+  });
+
+  const handleChange = (field: keyof Prescription, value: any) => {
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      
+      // When health fund changes, reset insurance type to 'רגיל' (default)
+      if (field === 'healthFund' && value) {
+        const defaultInsuranceType = 'רגיל';
+        newData.insuranceType = defaultInsuranceType;
+      }
+      
+      return newData;
+    });
+    
+    // Auto-save with debounce
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      // Prepare the data for saving
+      setFormData((currentData) => {
+        const dataToSave = { ...currentData, [field]: value };
+        
+        // Handle health fund change
+        if (field === 'healthFund' && value) {
+          dataToSave.insuranceType = 'רגיל';
+        }
+        
+        // Clean up payment fields
+        const cleanData: Partial<Prescription> = { ...dataToSave };
+        if (cleanData.amountToPay !== undefined) {
+          cleanData.amountToPay = cleanData.amountToPay === '' || cleanData.amountToPay === null ? null : Number(cleanData.amountToPay);
+        }
+        if (cleanData.paid !== undefined) {
+          cleanData.paid = cleanData.paid === '' || cleanData.paid === null ? null : Number(cleanData.paid);
+        }
+        
+        // Save to backend
+        updateMutation.mutate(cleanData);
+        
+        return currentData;
+      });
+    }, 1000); // 1 second debounce
+  };
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const renderFieldLTR = (
+    label: string,
+    field: keyof Prescription,
+    type: 'text' | 'number' | 'select' | 'textarea' = 'text',
+    options?: string[],
+    step?: string,
+    className: string = ''
+  ) => {
+    const value = formData[field];
+    const isBoldLabel = label === 'R' || label === 'L';
+
+    if (type === 'select' && options) {
+        return (
+          <div className={`flex items-center gap-1 ${className}`} dir="ltr">
+            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap`}>{label}:</span>
+            <select
+              value={value || ''}
+              onChange={(e) => handleChange(field, e.target.value || null)}
+              className="input text-base py-1.5 px-2 flex-1"
+              dir="ltr"
+            >
+              <option value="">השאר ריק</option>
+              {options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+      if (type === 'textarea') {
+        const isBoldLabel = label === 'R' || label === 'L';
+        return (
+          <div className={`flex items-start gap-1 flex-row-reverse ${className}`} dir="ltr">
+            <textarea
+              value={value || ''}
+              onChange={(e) => handleChange(field, e.target.value || null)}
+              className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
+              dir="ltr"
+              rows={1}
+            />
+            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap pt-1.5`}>{label}:</span>
+          </div>
+        );
+      }
+      // Check if this field should support arrow key navigation
+      const isIndexField = field === 'index';
+      const isColorField = field === 'color';
+      const navigationOptions = isIndexField ? indexOptions : isColorField ? colorOptions : undefined;
+      
+      return (
+        <div className={`flex items-center gap-1 ${className}`} dir="ltr">
+          <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap`}>{label}:</span>
+          <input
+            type={type}
+            step={step}
+            value={value || ''}
+            onChange={(e) =>
+              handleChange(
+                field,
+                type === 'number' ? (parseFloat(e.target.value) || null) : e.target.value || null
+              )
+            }
+            onKeyDown={navigationOptions ? (e) => handleArrowKeyNavigation(e, navigationOptions, value as string, (newValue) => handleChange(field, newValue)) : undefined}
+            className="input text-sm py-1.5 px-2 flex-1"
+            dir="ltr"
+          />
+        </div>
+      );
+  };
+
+  const renderFieldRTL = (
+    label: string,
+    field: keyof Prescription,
+    type: 'text' | 'number' | 'select' | 'textarea' = 'text',
+    options?: string[],
+    step?: string,
+    className: string = ''
+  ) => {
+    const value = formData[field];
+
+    if (type === 'select' && options) {
+        return (
+          <div className={`flex items-center gap-1 ${className}`} dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap">{label}:</span>
+            <select
+              value={value || ''}
+              onChange={(e) => handleChange(field, e.target.value || null)}
+              className="input text-base py-1.5 px-2 flex-1"
+              dir="rtl"
+            >
+              <option value="">השאר ריק</option>
+              {options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+      if (type === 'textarea') {
+        return (
+          <div className={`flex items-start gap-1 ${className}`} dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap pt-1.5">{label}:</span>
+            <textarea
+              value={value || ''}
+              onChange={(e) => handleChange(field, e.target.value || null)}
+              className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
+              dir="rtl"
+              rows={1}
+            />
+          </div>
+        );
+      }
+      return (
+        <div className={`flex items-center gap-1 ${className}`} dir="rtl">
+          <span className="text-xs text-slate-600 whitespace-nowrap">{label}:</span>
+          <input
+            type={type}
+            step={step}
+            value={value || ''}
+            onChange={(e) =>
+              handleChange(
+                field,
+                type === 'number' ? (parseFloat(e.target.value) || null) : e.target.value || null
+              )
+            }
+            className="input text-sm py-1.5 px-2 flex-1"
+            dir="rtl"
+          />
+        </div>
+      );
+  };
+
+  return (
+    <div className="card bg-slate-200/90 space-y-2 p-3">
+      {/* Header with Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Navigation arrows */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePrevious}
+              disabled={!hasPrevious}
+              className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="מרשם קודם"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!hasNext}
+              className="p-1.5 rounded bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              title="מרשם הבא"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          </div>
+          <h2 className="text-base font-bold text-slate-800">פרטי מרשם</h2>
+          {prescription.prescriptionNumber && (
+            <div className="bg-orange-100 px-1 py-0 rounded-sm border border-orange-200">
+              <span className="text-xs font-bold text-green-800">
+                מרשם מס' {prescription.prescriptionNumber}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 mr-2" dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap">קופת חולים:</span>
+            <select
+              value={formData.healthFund || ''}
+              onChange={(e) => handleChange('healthFund', e.target.value || null)}
+              className="input text-xs py-0.5 px-1.5"
+              dir="rtl"
+            >
+              <option value="">השאר ריק</option>
+              {healthFunds.map((fund) => (
+                <option key={fund} value={fund}>
+                  {fund}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-slate-600 whitespace-nowrap">סוג ביטוח:</span>
+            <select
+              value={formData.insuranceType || ''}
+              onChange={(e) => handleChange('insuranceType', e.target.value || null)}
+              className="input text-xs py-0.5 px-1.5"
+              dir="rtl"
+              disabled={!formData.healthFund}
+            >
+              <option value="">השאר ריק</option>
+              {availableInsuranceTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => duplicateMutation.mutate()}
+            disabled={duplicateMutation.isPending}
+            className="p-1.5 rounded bg-green-50 hover:bg-green-100 text-green-600 transition-colors disabled:opacity-50"
+            title="שכפל"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+          {prescription.type === 'מרחק' && prescription.add && prescription.add > 0 && (
+            <button
+              onClick={() => convertMutation.mutate()}
+              disabled={convertMutation.isPending}
+              className="p-1.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-600 transition-colors disabled:opacity-50"
+              title="המר לקריאה"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={() => generatePdfMutation.mutate()}
+            disabled={generatePdfMutation.isPending}
+            className="p-1.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors disabled:opacity-50"
+            title="הורד PDF"
+          >
+            <FileDown className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => createNewPrescriptionMutation.mutate()}
+            disabled={createNewPrescriptionMutation.isPending}
+            className="p-1.5 rounded bg-cyan-50 hover:bg-cyan-100 text-cyan-600 transition-colors disabled:opacity-50"
+            title="הוסף מרשם חדש (ריק)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          {isAdmin && (
+            <button
+              onClick={handleDeleteClick}
+              disabled={deleteMutation.isPending || verifyDeleteMutation.isPending}
+              className="p-1.5 rounded bg-red-50 hover:bg-red-100 text-red-600 transition-colors disabled:opacity-50"
+              title="מחק"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Basic Info */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-600 whitespace-nowrap min-w-[40px]">סוג:</span>
+          <div className="flex items-center gap-1">
+            <select
+              value={formData.type}
+              onChange={(e) => handleChange('type', e.target.value)}
+              className="input text-base py-1.5 px-2"
+              style={{ width: '150px' }}
+            >
+              <option value="מרחק">מרחק</option>
+              <option value="קריאה">קריאה</option>
+              <option value="עדשות מגע">עדשות מגע</option>
+              <option value="מולטיפוקל">מולטיפוקל</option>
+            </select>
+            {prescription.type === 'מרחק' && (
+              <button
+                onClick={() => {
+                  if (prescription.add && prescription.add > 0) {
+                    convertMutation.mutate();
+                  } else {
+                    alert('נדרש ערך ADD גדול מ-0 להמרה לקריאה');
+                  }
+                }}
+                disabled={convertMutation.isPending || !prescription.add || prescription.add <= 0}
+                className="p-1.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0 border border-purple-200"
+                title={prescription.add && prescription.add > 0 ? "העתק לקריאה (R+ADD, L+ADD, PD-3)" : "נדרש ADD > 0"}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '32px', minHeight: '32px' }}
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-600 whitespace-nowrap min-w-[50px]">תאריך:</span>
+          <input
+            type="date"
+            value={format(new Date(prescription.date), 'yyyy-MM-dd')}
+            onChange={(e) => handleChange('date', e.target.value)}
+            className="input text-base py-1.5 px-2 flex-1"
+            dir="ltr"
+          />
+        </div>
+      </div>
+
+      {/* Eye Prescription Data - R and L rows */}
+      <div className="space-y-2" dir="ltr">
+        <h3 className="text-sm font-semibold text-slate-700" dir="rtl">נתוני עיניים</h3>
+        
+        {/* R Row */}
+        <div className="bg-blue-50/50 rounded p-2 border border-blue-100">
+          <div className="grid grid-cols-4 gap-2">
+            {renderFieldLTR('R', 'r', 'number', undefined, '0.25')}
+            {renderFieldLTR('Cyl', 'cylR', 'number', undefined, '0.25')}
+            {renderFieldLTR('Ax', 'axR', 'number', undefined, '1')}
+            {renderFieldLTR('Va', 'vaR', 'text')}
+          </div>
+        </div>
+
+        {/* L Row */}
+        <div className="bg-green-50/50 rounded p-2 border border-green-100">
+          <div className="grid grid-cols-4 gap-2">
+            {renderFieldLTR('L', 'l', 'number', undefined, '0.25')}
+            {renderFieldLTR('Cyl', 'cylL', 'number', undefined, '0.25')}
+            {renderFieldLTR('Ax', 'axL', 'number', undefined, '1')}
+            {renderFieldLTR('Va', 'vaL', 'text')}
+          </div>
+        </div>
+      </div>
+
+      {/* General Data */}
+      <div className="space-y-2" dir="ltr">
+        <h3 className="text-sm font-semibold text-slate-700" dir="rtl">נתונים כלליים</h3>
+        <div className="flex gap-2 w-full">
+          {renderFieldLTR('Pd', 'pd', 'number', undefined, '0.5', 'flex-1')}
+          {renderFieldLTR('Add', 'add', 'number', undefined, '0.25', 'flex-1')}
+          {renderFieldLTR('index', 'index', 'text', undefined, undefined, 'flex-1')}
+          {renderFieldLTR('color', 'color', 'text', undefined, undefined, 'flex-1')}
+          {renderFieldLTR('%', 'colorPercentage', 'number', undefined, '0.1', 'flex-1')}
+        </div>
+        <div>
+          {renderFieldLTR('הערות', 'notes', 'textarea')}
+        </div>
+      </div>
+
+      {/* Frame Data */}
+      <div className="space-y-2" dir="rtl">
+        <h3 className="text-sm font-semibold text-slate-700">נתוני מסגרת</h3>
+        <div className="grid grid-cols-5 gap-2">
+          {renderFieldRTL('שם', 'frameName', 'text')}
+          {renderFieldRTL('דגם', 'frameModel', 'text')}
+          {renderFieldRTL('צבע', 'frameColor', 'text')}
+          {renderFieldRTL('C', 'frameC', 'text')}
+          {renderFieldRTL('רוחב', 'frameWidth', 'text')}
+          <div className="col-span-3">
+            {renderFieldRTL('הערות מסגרת', 'frameNotes', 'textarea')}
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Data */}
+      <div className="space-y-2 border-t pt-2" dir="rtl">
+        <h3 className="text-sm font-semibold text-slate-700">נתוני תשלום</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="flex items-center gap-1" dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap">לתשלום:</span>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.amountToPay || ''}
+              onChange={(e) => handleChange('amountToPay', parseFloat(e.target.value) || null)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  const currentValue = formData.amountToPay || 0;
+                  const increment = e.key === 'ArrowUp' ? 10 : -10;
+                  const newValue = Math.max(0, currentValue + increment);
+                  handleChange('amountToPay', newValue);
+                }
+              }}
+              className="input text-base py-1.5 px-2 flex-1"
+              dir="ltr"
+            />
+          </div>
+          <div className="flex items-center gap-1" dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap">שולם:</span>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.paid || ''}
+              onChange={(e) => handleChange('paid', parseFloat(e.target.value) || null)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  const currentValue = formData.paid || 0;
+                  const increment = e.key === 'ArrowUp' ? 10 : -10;
+                  const newValue = Math.max(0, currentValue + increment);
+                  handleChange('paid', newValue);
+                }
+              }}
+              className="input text-base py-1.5 px-2 flex-1"
+              dir="ltr"
+            />
+          </div>
+          <div className="flex items-center gap-1" dir="rtl">
+            <span className="text-xs text-slate-600 whitespace-nowrap">יתרה:</span>
+            <div className="px-2 py-1.5 bg-slate-50/60 rounded text-base flex-1 min-h-[32px] flex items-center font-bold text-green-800">
+              {prescription.balance || 0} ₪
+            </div>
+          </div>
+          {renderFieldRTL('מס\' קבלה', 'receiptNumber', 'text')}
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" dir="rtl">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-slate-800 mb-4">מחיקת מרשם</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              האם אתה בטוח שברצונך למחוק מרשם זה? פעולה זו אינה ניתנת לביטול.
+            </p>
+            <div className="mb-4">
+              <label className="label text-sm">סיסמת מנהל</label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                className="input"
+                placeholder="הזן סיסמת מנהל"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleDeleteConfirm();
+                  }
+                  if (e.key === 'Escape') {
+                    setShowDeleteModal(false);
+                    setDeletePassword('');
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                }}
+                className="btn btn-secondary"
+                disabled={verifyDeleteMutation.isPending}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                disabled={verifyDeleteMutation.isPending || !deletePassword}
+                className="btn btn-danger"
+              >
+                {verifyDeleteMutation.isPending ? 'מאמת...' : 'מחק'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
