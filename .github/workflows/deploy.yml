@@ -24,12 +24,16 @@ jobs:
             
             # Fix git ownership issue
             git config --global --add safe.directory ${{ secrets.PROJECT_PATH }}
+            sudo chown -R $USER:$USER ${{ secrets.PROJECT_PATH }}
             
             echo "Stopping containers..."
             sudo docker compose down
             
+            echo "Ensuring HTTPS remote..."
+            git remote set-url origin https://github.com/the-dave-ops/280.git
+            
             echo "Pulling latest changes..."
-            git pull
+            git pull origin main
             
             echo "Building and starting containers..."
             sudo docker compose up --build -d
