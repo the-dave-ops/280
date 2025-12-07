@@ -7,9 +7,9 @@ echo "🚀 Starting Optometry Application with Nginx Reverse Proxy"
 echo "=========================================================="
 echo ""
 
-# Check if docker-compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Error: docker-compose is not installed"
+# Check if docker compose is installed
+if ! command -v docker compose &> /dev/null; then
+    echo "❌ Error: docker compose is not installed"
     exit 1
 fi
 
@@ -57,13 +57,13 @@ fi
 # Stop any existing containers
 echo "🛑 Stopping existing containers..."
 cd ..
-docker-compose down 2>/dev/null
-docker-compose -f docker-compose.nginx.yml down 2>/dev/null
+docker compose down 2>/dev/null
+docker compose -f docker compose.nginx.yml down 2>/dev/null
 
 # Start with nginx
 echo ""
 echo "🚀 Starting services with Nginx proxy..."
-docker-compose -f docker-compose.nginx.yml up -d
+docker compose -f docker compose.nginx.yml up -d
 
 # Wait for services to be ready
 echo ""
@@ -73,7 +73,7 @@ sleep 5
 # Check service status
 echo ""
 echo "📊 Service Status:"
-docker-compose -f docker-compose.nginx.yml ps
+docker compose -f docker compose.nginx.yml ps
 
 echo ""
 echo "✅ Setup Complete!"
@@ -88,8 +88,8 @@ else
 fi
 echo ""
 echo "📝 Useful commands:"
-echo "   View logs: docker-compose -f docker-compose.nginx.yml logs -f"
-echo "   Stop services: docker-compose -f docker-compose.nginx.yml down"
-echo "   Restart nginx: docker-compose -f docker-compose.nginx.yml restart nginx"
+echo "   View logs: docker compose -f docker compose.nginx.yml logs -f"
+echo "   Stop services: docker compose -f docker compose.nginx.yml down"
+echo "   Restart nginx: docker compose -f docker compose.nginx.yml restart nginx"
 echo ""
 echo "📚 For more information, see nginx/NGINX_SETUP.md"
