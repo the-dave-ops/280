@@ -477,6 +477,17 @@ export function PrescriptionDetails({
             }}
             onKeyDown={(e) => {
               handleEnterKeyNavigation(e);
+              
+              // Handle Shift+Arrow for whole number increments on number fields
+              if (type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.shiftKey) {
+                e.preventDefault();
+                const currentValue = typeof value === 'number' ? value : 0;
+                const increment = e.key === 'ArrowUp' ? 1 : -1;
+                const newValue = currentValue + increment;
+                handleChange(field, newValue);
+                return;
+              }
+              
               if (navigationOptions) {
                 handleArrowKeyNavigation(e, navigationOptions, value as string, (newValue) => handleChange(field, newValue));
               }
@@ -793,7 +804,8 @@ export function PrescriptionDetails({
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                   e.preventDefault();
                   const currentValue = formData.amountToPay || 0;
-                  const increment = e.key === 'ArrowUp' ? 10 : -10;
+                  // Shift+Arrow: increment by 1, Arrow alone: increment by 10
+                  const increment = e.shiftKey ? (e.key === 'ArrowUp' ? 1 : -1) : (e.key === 'ArrowUp' ? 10 : -10);
                   const newValue = Math.max(0, currentValue + increment);
                   handleChange('amountToPay', newValue);
                 }
@@ -814,7 +826,8 @@ export function PrescriptionDetails({
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                   e.preventDefault();
                   const currentValue = formData.paid || 0;
-                  const increment = e.key === 'ArrowUp' ? 10 : -10;
+                  // Shift+Arrow: increment by 1, Arrow alone: increment by 10
+                  const increment = e.shiftKey ? (e.key === 'ArrowUp' ? 1 : -1) : (e.key === 'ArrowUp' ? 10 : -10);
                   const newValue = Math.max(0, currentValue + increment);
                   handleChange('paid', newValue);
                 }
