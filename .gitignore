@@ -39,4 +39,5 @@ database/data/
 # Docker
 .docker/
 
-original*/
+original/
+original-2/
