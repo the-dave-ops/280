@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS 
+      ? process.env.VITE_ALLOWED_HOSTS.split(',').map(host => host.trim())
+      : ['localhost', '.localhost'],
     watch: {
       usePolling: true,
     },
