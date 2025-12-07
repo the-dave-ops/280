@@ -50,6 +50,28 @@ const handleArrowKeyNavigation = (
   }
 };
 
+// Helper function to validate if AX is required when CYL is present
+const validateAxisRequired = (prescription: Prescription): { isValid: boolean; missingFields: string[] } => {
+  const missingFields: string[] = [];
+  
+  // Check right eye
+  if ((prescription.cylR !== null && prescription.cylR !== 0 && prescription.cylR !== undefined) && 
+      (prescription.axR === null || prescription.axR === 0 || prescription.axR === undefined)) {
+    missingFields.push('axR');
+  }
+  
+  // Check left eye
+  if ((prescription.cylL !== null && prescription.cylL !== 0 && prescription.cylL !== undefined) && 
+      (prescription.axL === null || prescription.axL === 0 || prescription.axL === undefined)) {
+    missingFields.push('axL');
+  }
+  
+  return {
+    isValid: missingFields.length === 0,
+    missingFields
+  };
+};
+
 // Helper function to handle Enter key to move to next field
 const handleEnterKeyNavigation = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
   if (e.key === 'Enter') {
@@ -379,6 +401,12 @@ export function PrescriptionDetails({
   ) => {
     const value = formData[field];
     const isBoldLabel = label === 'R' || label === 'L';
+    
+    // Check if this is an AX field that's required but missing
+    const isAxFieldMissing = (
+      (field === 'axR' && formData.cylR !== null && formData.cylR !== 0 && (formData.axR === null || formData.axR === 0)) ||
+      (field === 'axL' && formData.cylL !== null && formData.cylL !== 0 && (formData.axL === null || formData.axL === 0))
+    );
 
     if (type === 'select' && options) {
         return (
@@ -422,26 +450,38 @@ export function PrescriptionDetails({
       const isColorField = field === 'color';
       const navigationOptions = isIndexField ? indexOptions : isColorField ? colorOptions : undefined;
       
+      // Check if this field should be formatted with 2 decimal places
+      const shouldFormatDecimals = type === 'number' && ['r', 'l', 'cylR', 'cylL', 'axR', 'axL'].includes(field as string);
+      
       return (
         <div className={`flex items-center gap-1 ${className}`} dir="ltr">
           <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap`}>{label}:</span>
           <input
             type={type}
             step={step}
-            value={value || ''}
+            value={value !== null && value !== undefined && shouldFormatDecimals ? Number(value).toFixed(2) : (value || '')}
             onChange={(e) =>
               handleChange(
                 field,
                 type === 'number' ? (parseFloat(e.target.value) || null) : e.target.value || null
               )
             }
+            onBlur={(e) => {
+              // Format to 2 decimal places on blur for specific fields
+              if (shouldFormatDecimals && e.target.value) {
+                const numValue = parseFloat(e.target.value);
+                if (!isNaN(numValue)) {
+                  handleChange(field, numValue);
+                }
+              }
+            }}
             onKeyDown={(e) => {
               handleEnterKeyNavigation(e);
               if (navigationOptions) {
                 handleArrowKeyNavigation(e, navigationOptions, value as string, (newValue) => handleChange(field, newValue));
               }
             }}
-            className="input text-sm py-1.5 px-2 flex-1"
+            className={`input text-sm py-1.5 px-2 flex-1 ${isAxFieldMissing ? 'border-2 border-red-500 bg-red-50' : ''}`}
             dir="ltr"
           />
         </div>
@@ -599,7 +639,14 @@ export function PrescriptionDetails({
             </button>
           )}
           <button
-            onClick={() => generatePdfMutation.mutate()}
+            onClick={() => {
+              const validation = validateAxisRequired(prescription);
+              if (!validation.isValid) {
+                alert('שגיאה: כאשר יש ערך בשדה CYL (צילינדר), חייב להיות ערך בשדה AX (מעלות).\n\nאנא מלא את השדות החסרים לפני הדפסה.');
+                return;
+              }
+              generatePdfMutation.mutate();
+            }}
             disabled={generatePdfMutation.isPending}
             className="p-1.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors disabled:opacity-50"
             title="הורד PDF"
