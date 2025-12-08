@@ -76,13 +76,15 @@ export interface Prescription {
   frameName?: string | null;
   frameModel?: string | null;
   frameColor?: string | null;
-  frameBridge?: string | null; // New field
+  frameSku?: string | null; // Frame SKU (מק"ט)
+  frameBridge?: string | null;
   frameWidth?: string | null;
   frameNotes?: string | null;
   
   // Financial fields
   healthFund?: string | null;
   insuranceType?: string | null;
+  prescriptionSource?: string | null; // Source: "אופטומטריסט" | "משקף קיים" | "בדיקה חיצונית"
   price?: number | null;
   discountSource?: string | null;
   amountToPay?: number | null;

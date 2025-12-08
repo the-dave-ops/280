@@ -99,11 +99,13 @@ model Prescription {
   frameName         String?   @map("frame_name") @db.VarChar(255) // Frame name
   frameModel        String?   @map("frame_model") @db.VarChar(255) // Frame model
   frameColor        String?   @map("frame_color") @db.VarChar(255) // Frame color: אדום, ירוק, כחול, חום, ורוד, זהב מט, זהב מבריק, כסף מבריק, כסף מט, ניקל, אפור, טורקיז, כתום, שחור-לבן, שחור, שקוף, אחר
+  frameSku          String?   @map("frame_sku") @db.VarChar(100) // Frame SKU (מק"ט)
   frameBridge       String?   @map("frame_bridge") @db.VarChar(50) // Frame bridge
   frameWidth        String?   @map("frame_width") @db.VarChar(50) // Frame width
   frameNotes        String?   @map("frame_notes") @db.Text // Frame notes
   healthFund        String?   @map("health_fund") @db.VarChar(255) // Health fund for prescription
   insuranceType     String?   @map("insurance_type") @db.VarChar(255) // Insurance type (e.g., "מושלם", "מכבי זהב")
+  prescriptionSource String?  @map("prescription_source") @db.VarChar(100) // Source: "אופטומטריסט", "משקף קיים", "בדיקה חיצונית"
   price             Float?    @default(0)
   discountSource    String?   @map("discount_source") @db.VarChar(255)
   amountToPay       Float?    @default(0) @map("amount_to_pay")

@@ -1,0 +1,80 @@
+# Production Dockerfile - Multi-stage build for smaller image
+
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Stage 2: Build
+FROM node:18-alpine AS builder
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies
+RUN npm ci
+
+# Copy Prisma schema
+COPY prisma ./prisma
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy source code
+COPY src ./src
+COPY tsconfig.json ./
+
+# Build TypeScript (if you have a build script)
+# RUN npm run build
+
+# Stage 3: Production runtime
+FROM node:18-alpine AS production
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Copy production dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package*.json ./
+
+# Copy Prisma files and generated client
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Copy source code (or built code if you have a build step)
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./
+
+# Copy migration script
+COPY scripts/run-migrations.sh /app/scripts/
+RUN chmod +x /app/scripts/run-migrations.sh
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 3001
+
+# Run migrations and start the application
+CMD ["sh", "-c", "/app/scripts/run-migrations.sh && npm start"]

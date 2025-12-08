@@ -6,12 +6,85 @@ import { optometristsApi } from '../api/optometrists';
 import type { Prescription, Customer } from '../types';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
-import { PrescriptionPrintView } from './PrescriptionPrintView';
 
 const healthFunds = ['מאוחדת', 'מכבי', 'לאומית', 'כללית'];
 const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.71', '1.74', '1.76', 'ייצור', 'סופר פלט', 'דק סכין'];
 const colorOptions = ['שקוף', 'כחול', 'חום', 'אפור', 'ירוק', 'ורוד', 'סגול', 'צהוב'];
 const frameColorOptions = ['אדום', 'ירוק', 'כחול', 'חום', 'ורוד', 'זהב מט', 'זהב מבריק', 'כסף מבריק', 'כסף מט', 'ניקל', 'אפור', 'טורקיז', 'כתום', 'שחור-לבן', 'שחור', 'שקוף', 'אחר'];
+const prescriptionSourceOptions = ['אופטומטריסט', 'משקף קיים', 'בדיקה חיצונית'];
+
+// Generate HTML for printing in new window
+const generatePrintHTML = (prescription: Prescription, customer: Customer) => `
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>מרשם ${prescription.prescriptionNumber || prescription.id}</title>
+  <style>
+    @page { size: A5; margin: 8mm; }
+    body { font-family: Arial; margin: 0; padding: 8mm; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 3px solid #000; }
+    .logo { width: 120px; }
+    .customer-info { text-align: right; font-size: 10px; line-height: 1.4; }
+    .title { text-align: center; font-size: 14px; font-weight: bold; margin: 8px 0; padding: 6px; background: #333; color: white; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; border: 2px solid #000; }
+    td { border: 1px solid #000; padding: 4px; text-align: center; }
+    td.label { background: #f0f0f0; font-weight: bold; text-align: right; width: 15%; }
+    td.value { font-size: 12px; font-weight: bold; }
+    tr.blue td.label { background: #e6f2ff; color: #0066cc; }
+    .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.png" alt="רשת משקפיים 280" class="logo" />
+    <div class="customer-info">
+      <div><strong>שם:</strong> ${customer.firstName} ${customer.lastName}</div>
+      <div><strong>טלפון:</strong> ${customer.mobile1 || customer.phone || 'לא צוין'}</div>
+      <div><strong>לקוח מספר:</strong> ${customer.idNumber}</div>
+      <div><strong>כתובת:</strong> ${customer.street || ''} ${customer.city || ''}</div>
+      <div><strong>ת.ז:</strong> ${new Date(prescription.date).toLocaleDateString('he-IL')}</div>
+    </div>
+  </div>
+  <div class="title">מרשם מס' ${prescription.prescriptionNumber || prescription.id} מתאריך ${new Date(prescription.date).toLocaleDateString('he-IL')}</div>
+  <table>
+    <tr>
+      <td class="label">R:</td><td class="value">${prescription.r?.toFixed(2) || ''}</td>
+      <td class="label">Cyl R:</td><td class="value">${prescription.cylR?.toFixed(2) || ''}</td>
+      <td class="label">AX R:</td><td class="value">${prescription.axR || ''}</td>
+    </tr>
+    <tr class="blue">
+      <td class="label">L:</td><td class="value">${prescription.l?.toFixed(2) || ''}</td>
+      <td class="label">Cyl L:</td><td class="value">${prescription.cylL?.toFixed(2) || ''}</td>
+      <td class="label">AX L:</td><td class="value">${prescription.axL || ''}</td>
+    </tr>
+    <tr>
+      <td class="label">index:</td><td class="value">${prescription.index || ''}</td>
+      <td class="label">PD:</td><td class="value">${prescription.pdTotal?.toFixed(2) || ''}</td>
+      <td class="label">ADD:</td><td class="value">${prescription.add?.toFixed(2) || ''}</td>
+    </tr>
+    <tr>
+      <td class="label">color:</td><td colspan="3">${prescription.color || ''}</td>
+      <td class="label">%:</td><td>${prescription.colorPercentage || ''}</td>
+    </tr>
+  </table>
+  <table>
+    <tr>
+      <td class="label" style="width:25%">קופ"ח:</td><td>${prescription.healthFund || ''}</td>
+      <td class="label" style="width:25%">מחירון:</td><td></td>
+    </tr>
+    <tr><td class="label">סוג ביטוח:</td><td colspan="3">${prescription.insuranceType || ''}</td></tr>
+    <tr><td class="label">מקור מרשם:</td><td colspan="3">${prescription.prescriptionSource || ''}</td></tr>
+    <tr><td class="label">מק"ט מסגרת:</td><td colspan="3">${prescription.frameSku || ''}</td></tr>
+    <tr><td class="label">הערות:</td><td colspan="3" style="font-size:10px">${prescription.notes || ''}</td></tr>
+  </table>
+  <div style="margin: 12px 0; padding: 10px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; font-size: 10px; line-height: 1.6; text-align: right; color: #856404;">
+    ידוע לי כי ההתקשרות עימי תיהיה באמצעות שליחת הודעת טקסט ו/או הודעה קולית ואני מאשר/ת לרשת 280 לעדכן אותי בכל דבר שנוגע לבניי המנוי לרשת. מבצעים, פרומוים שונים והטבות מעת לעת.תחילתם.
+  </div>
+  <div class="footer">מספר מרשם: ${prescription.prescriptionNumber || prescription.id} | תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}</div>
+</body>
+</html>
+`;
 
 // Insurance types mapping for each health fund
 const insuranceTypesByHealthFund: Record<string, string[]> = {
@@ -119,7 +192,7 @@ export function PrescriptionDetails({
   onAddNew,
 }: PrescriptionDetailsProps) {
   const [formData, setFormData] = useState<Partial<Prescription>>(prescription);
-  const [showPrintView, setShowPrintView] = useState(false);
+  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -201,11 +274,19 @@ export function PrescriptionDetails({
     const pdR = formData.pdR;
     const pdL = formData.pdL;
     
+    // Calculate total: if both exist, sum them; if only one exists, use it; if none, set to null
+    let total: number | null = null;
+    
     if (pdR !== null && pdR !== undefined && pdL !== null && pdL !== undefined) {
-      const total = Number(pdR) + Number(pdL);
-      if (formData.pdTotal !== total) {
-        setFormData(prev => ({ ...prev, pdTotal: total }));
-      }
+      total = Number(pdR) + Number(pdL);
+    } else if (pdR !== null && pdR !== undefined) {
+      total = Number(pdR);
+    } else if (pdL !== null && pdL !== undefined) {
+      total = Number(pdL);
+    }
+    
+    if (formData.pdTotal !== total) {
+      setFormData(prev => ({ ...prev, pdTotal: total }));
     }
   }, [formData.pdR, formData.pdL]);
 
@@ -301,11 +382,13 @@ export function PrescriptionDetails({
       frameName: null,
       frameModel: null,
       frameColor: null,
+      frameSku: null,
       frameC: null,
       frameWidth: null,
       frameNotes: null,
       healthFund: null,
       insuranceType: null,
+      prescriptionSource: null,
       price: 0,
       discountSource: null,
       amountToPay: 0,
@@ -660,7 +743,22 @@ export function PrescriptionDetails({
                 alert('שגיאה: כאשר יש ערך בשדה CYL (צילינדר), חייב להיות ערך בשדה AX (מעלות).\n\nאנא מלא את השדות החסרים לפני הדפסה.');
                 return;
               }
-              setShowPrintView(true);
+              
+              // Open new window with print content
+              const printWindow = window.open('', '_blank', 'width=800,height=600');
+              if (printWindow) {
+                printWindow.document.write(generatePrintHTML(prescription, customer));
+                printWindow.document.close();
+                
+                // Wait for content to load, then print
+                printWindow.onload = () => {
+                  printWindow.print();
+                  // Close window after print dialog is closed
+                  printWindow.onafterprint = () => {
+                    printWindow.close();
+                  };
+                };
+              }
             }}
             className="p-1.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
             title="הדפס מרשם"
@@ -726,6 +824,7 @@ export function PrescriptionDetails({
         </div>
         {renderFieldRTL('קופת חולים', 'healthFund', 'select', healthFunds)}
         {renderFieldRTL('סוג ביטוח', 'insuranceType', 'select', availableInsuranceTypes)}
+        {renderFieldRTL('מקור מרשם', 'prescriptionSource', 'select', prescriptionSourceOptions)}
         <div className="flex items-center gap-1">
           <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">שם עובד:</span>
           <select
@@ -751,49 +850,69 @@ export function PrescriptionDetails({
             <Eye className="w-5 h-5" />
           </div>
           <div className="flex-1 space-y-1" dir="ltr">
+            {/* כפתור הרחבה */}
+            <button
+              type="button"
+              onClick={() => setShowAdvancedFields(!showAdvancedFields)}
+              className="mb-2 px-3 py-1 text-xs font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors flex items-center gap-1"
+            >
+              {showAdvancedFields ? 'הסתר שדות מתקדמים <<' : 'שדות מתקדמים >>'}
+            </button>
             {/* Header Row with Labels */}
-            <div className="grid gap-1 px-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+            <div className="grid gap-1 px-1" style={{ gridTemplateColumns: showAdvancedFields ? '0.5fr 1fr 1fr 1fr 1fr 1.2fr 1fr 1.5fr 1.5fr 1.5fr' : '0.5fr 1fr 1fr 1fr 1fr' }}>
               <div className="text-xs font-semibold text-slate-600 text-center"></div>
               <div className="text-xs font-semibold text-slate-600 text-center">SPH</div>
               <div className="text-xs font-semibold text-slate-600 text-center">CYL</div>
               <div className="text-xs font-semibold text-slate-600 text-center">Axis</div>
-              <div className="text-xs font-semibold text-slate-600 text-center">PRISM</div>
               <div className="text-xs font-semibold text-slate-600 text-center">PD</div>
-              <div className="text-xs font-semibold text-slate-600 text-center">גובה</div>
-              <div className="text-xs font-semibold text-slate-600 text-center">In/Out</div>
-              <div className="text-xs font-semibold text-slate-600 text-center">Up/Down</div>
-              <div className="text-xs font-semibold text-slate-600 text-center">VA</div>
+              {showAdvancedFields && (
+                <>
+                  <div className="text-xs font-semibold text-slate-600 text-center">PRISM</div>
+                  <div className="text-xs font-semibold text-slate-600 text-center">גובה</div>
+                  <div className="text-xs font-semibold text-slate-600 text-center">In/Out</div>
+                  <div className="text-xs font-semibold text-slate-600 text-center">Up/Down</div>
+                  <div className="text-xs font-semibold text-slate-600 text-center">VA</div>
+                </>
+              )}
             </div>
             
             {/* R Row */}
             <div className="bg-blue-100 rounded p-1 border border-blue-200">
-              <div className="grid gap-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+              <div className="grid gap-1" style={{ gridTemplateColumns: showAdvancedFields ? '0.5fr 1fr 1fr 1fr 1fr 1.2fr 1fr 1.5fr 1.5fr 1.5fr' : '0.5fr 1fr 1fr 1fr 1fr' }}>
                 <div className="text-xs font-bold text-white bg-blue-600 rounded flex items-center justify-center py-1">R</div>
                 {renderFieldLTR('', 'r', 'number', undefined, '0.25')}
                 {renderFieldLTR('', 'cylR', 'number', undefined, '0.25')}
-                {renderFieldLTR('', 'axR', 'number', undefined, '1')}
-                {renderFieldLTR('', 'prismR', 'number', undefined, '0.25', '', '0.25', '4')}
+                {renderFieldLTR('', 'axR', 'number', undefined, '1', '', '0', '180')}
                 {renderFieldLTR('', 'pdR', 'number', undefined, '0.5', '', '20', '40')}
-                {renderFieldLTR('', 'heightR', 'number', undefined, '0.5', '', '16', '35')}
-                {renderFieldLTR('', 'inOutR', 'select', ['in', 'out'])}
-                {renderFieldLTR('', 'upDownR', 'select', ['up', 'down'])}
-                {renderFieldLTR('', 'vaR', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+                {showAdvancedFields && (
+                  <>
+                    {renderFieldLTR('', 'prismR', 'number', undefined, '0.25', '', '0.25', '4')}
+                    {renderFieldLTR('', 'heightR', 'number', undefined, '0.5', '', '16', '35')}
+                    {renderFieldLTR('', 'inOutR', 'select', ['in', 'out'])}
+                    {renderFieldLTR('', 'upDownR', 'select', ['up', 'down'])}
+                    {renderFieldLTR('', 'vaR', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+                  </>
+                )}
               </div>
             </div>
 
             {/* L Row */}
             <div className="bg-green-100 rounded p-1 border border-green-200">
-              <div className="grid gap-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+              <div className="grid gap-1" style={{ gridTemplateColumns: showAdvancedFields ? '0.5fr 1fr 1fr 1fr 1fr 1.2fr 1fr 1.5fr 1.5fr 1.5fr' : '0.5fr 1fr 1fr 1fr 1fr' }}>
                 <div className="text-xs font-bold text-white bg-green-600 rounded flex items-center justify-center py-1">L</div>
                 {renderFieldLTR('', 'l', 'number', undefined, '0.25')}
                 {renderFieldLTR('', 'cylL', 'number', undefined, '0.25')}
-                {renderFieldLTR('', 'axL', 'number', undefined, '1')}
-                {renderFieldLTR('', 'prismL', 'number', undefined, '0.25', '', '0.25', '4')}
+                {renderFieldLTR('', 'axL', 'number', undefined, '1', '', '0', '180')}
                 {renderFieldLTR('', 'pdL', 'number', undefined, '0.5', '', '20', '40')}
-                {renderFieldLTR('', 'heightL', 'number', undefined, '0.5', '', '16', '35')}
-                {renderFieldLTR('', 'inOutL', 'select', ['in', 'out'])}
-                {renderFieldLTR('', 'upDownL', 'select', ['up', 'down'])}
-                {renderFieldLTR('', 'vaL', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+                {showAdvancedFields && (
+                  <>
+                    {renderFieldLTR('', 'prismL', 'number', undefined, '0.25', '', '0.25', '4')}
+                    {renderFieldLTR('', 'heightL', 'number', undefined, '0.5', '', '16', '35')}
+                    {renderFieldLTR('', 'inOutL', 'select', ['in', 'out'])}
+                    {renderFieldLTR('', 'upDownL', 'select', ['up', 'down'])}
+                    {renderFieldLTR('', 'vaL', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -841,6 +960,7 @@ export function PrescriptionDetails({
               {renderFieldRTL('שם', 'frameName', 'text')}
               {renderFieldRTL('דגם', 'frameModel', 'text')}
               {renderFieldRTL('צבע', 'frameColor', 'select', frameColorOptions)}
+              {renderFieldRTL('מק"ט', 'frameSku', 'text')}
               {renderFieldRTL('גשר', 'frameBridge', 'text')}
               {renderFieldRTL('רוחב', 'frameWidth', 'text')}
             </div>
@@ -967,20 +1087,6 @@ export function PrescriptionDetails({
         </div>
       )}
 
-      {/* Print View Modal */}
-      {showPrintView && (
-        <div className="fixed inset-0 bg-white z-50 overflow-auto">
-          <div className="max-w-4xl mx-auto p-4">
-            <button
-              onClick={() => setShowPrintView(false)}
-              className="no-print mb-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors"
-            >
-              ✕ סגור
-            </button>
-            <PrescriptionPrintView prescription={prescription} customer={customer} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
