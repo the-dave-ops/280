@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Trash2, Copy, FileDown, RotateCcw, Plus, ChevronLeft, ChevronRight, Eye, FileText, Glasses, DollarSign } from 'lucide-react';
+import { Trash2, Copy, RotateCcw, Plus, ChevronLeft, ChevronRight, Eye, FileText, Glasses, DollarSign, Printer } from 'lucide-react';
 import { prescriptionsApi } from '../api/prescriptions';
 import { optometristsApi } from '../api/optometrists';
 import type { Prescription, Customer } from '../types';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
+import { PrescriptionPrintView } from './PrescriptionPrintView';
 
 const healthFunds = ['מאוחדת', 'מכבי', 'לאומית', 'כללית'];
 const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.71', '1.74', '1.76', 'ייצור', 'סופר פלט', 'דק סכין'];
@@ -118,6 +119,7 @@ export function PrescriptionDetails({
   onAddNew,
 }: PrescriptionDetailsProps) {
   const [formData, setFormData] = useState<Partial<Prescription>>(prescription);
+  const [showPrintView, setShowPrintView] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -337,24 +339,6 @@ export function PrescriptionDetails({
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       // Update to show the new converted prescription
       onUpdate(newPrescription);
-    },
-  });
-
-  const generatePdfMutation = useMutation({
-    mutationFn: () => {
-      // Can't generate PDF for a prescription that doesn't exist yet
-      if (!prescription.id) {
-        throw new Error('Cannot generate PDF for an unsaved prescription');
-      }
-      return prescriptionsApi.generatePdf(prescription.id);
-    },
-    onSuccess: (blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `prescription_${prescription.id}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
     },
   });
 
@@ -676,13 +660,12 @@ export function PrescriptionDetails({
                 alert('שגיאה: כאשר יש ערך בשדה CYL (צילינדר), חייב להיות ערך בשדה AX (מעלות).\n\nאנא מלא את השדות החסרים לפני הדפסה.');
                 return;
               }
-              generatePdfMutation.mutate();
+              setShowPrintView(true);
             }}
-            disabled={generatePdfMutation.isPending}
-            className="p-1.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors disabled:opacity-50"
-            title="הורד PDF"
+            className="p-1.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors"
+            title="הדפס מרשם"
           >
-            <FileDown className="w-4 h-4" />
+            <Printer className="w-4 h-4" />
           </button>
           <button
             onClick={() => createNewPrescriptionMutation.mutate()}
@@ -980,6 +963,21 @@ export function PrescriptionDetails({
                 {verifyDeleteMutation.isPending ? 'מאמת...' : 'מחק'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print View Modal */}
+      {showPrintView && (
+        <div className="fixed inset-0 bg-white z-50 overflow-auto">
+          <div className="max-w-4xl mx-auto p-4">
+            <button
+              onClick={() => setShowPrintView(false)}
+              className="no-print mb-4 px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors"
+            >
+              ✕ סגור
+            </button>
+            <PrescriptionPrintView prescription={prescription} customer={customer} />
           </div>
         </div>
       )}
