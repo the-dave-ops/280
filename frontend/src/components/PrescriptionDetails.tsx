@@ -439,7 +439,7 @@ export function PrescriptionDetails({
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
               onKeyDown={handleEnterKeyNavigation}
-              className="input text-base py-1.5 px-2 flex-1"
+              className="input text-sm py-1.5 px-2 flex-1"
               dir="ltr"
             >
               <option value="">השאר ריק</option>
@@ -542,7 +542,7 @@ export function PrescriptionDetails({
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
               onKeyDown={handleEnterKeyNavigation}
-              className="input text-base py-1.5 px-2 flex-1"
+              className="input text-sm py-1.5 px-2 flex-1"
               dir="rtl"
             >
               <option value="">השאר ריק</option>
@@ -698,7 +698,7 @@ export function PrescriptionDetails({
               value={formData.type}
               onChange={(e) => handleChange('type', e.target.value)}
               onKeyDown={handleEnterKeyNavigation}
-              className="input text-base py-1.5 px-2"
+              className="input text-sm py-1.5 px-2"
               style={{ width: '150px' }}
             >
               <option value="מרחק">מרחק</option>
@@ -748,12 +748,12 @@ export function PrescriptionDetails({
       {/* Eye Prescription Data - R and L rows */}
       <div className="border-2 border-blue-300 rounded-lg p-2 bg-blue-50/30">
         <div className="flex gap-2">
-          <div className="bg-blue-200 text-blue-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
-            <Eye className="w-6 h-6" />
+          <div className="bg-blue-200 text-blue-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
+            <Eye className="w-5 h-5" />
           </div>
           <div className="flex-1 space-y-1" dir="ltr">
             {/* Header Row with Labels */}
-            <div className="grid gap-1 px-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+            <div className="grid gap-1 px-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
               <div className="text-xs font-semibold text-slate-600 text-center"></div>
               <div className="text-xs font-semibold text-slate-600 text-center">SPH</div>
               <div className="text-xs font-semibold text-slate-600 text-center">CYL</div>
@@ -768,7 +768,7 @@ export function PrescriptionDetails({
             
             {/* R Row */}
             <div className="bg-blue-100 rounded p-1 border border-blue-200">
-              <div className="grid gap-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+              <div className="grid gap-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
                 <div className="text-xs font-bold text-white bg-blue-600 rounded flex items-center justify-center py-1">R</div>
                 {renderFieldLTR('', 'r', 'number', undefined, '0.25')}
                 {renderFieldLTR('', 'cylR', 'number', undefined, '0.25')}
@@ -784,7 +784,7 @@ export function PrescriptionDetails({
 
             {/* L Row */}
             <div className="bg-green-100 rounded p-1 border border-green-200">
-              <div className="grid gap-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+              <div className="grid gap-1" style={{ gridTemplateColumns: '0.5fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
                 <div className="text-xs font-bold text-white bg-green-600 rounded flex items-center justify-center py-1">L</div>
                 {renderFieldLTR('', 'l', 'number', undefined, '0.25')}
                 {renderFieldLTR('', 'cylL', 'number', undefined, '0.25')}
@@ -804,8 +804,8 @@ export function PrescriptionDetails({
       {/* General Data */}
       <div className="border-2 border-purple-300 rounded-lg p-2 bg-purple-50/30">
         <div className="flex gap-2">
-          <div className="bg-purple-200 text-purple-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
-            <FileText className="w-6 h-6" />
+          <div className="bg-purple-200 text-purple-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
+            <FileText className="w-5 h-5" />
           </div>
           <div className="flex gap-1 w-full" dir="ltr">
             {renderFieldLTR('PD Total', 'pdTotal', 'number', undefined, '0.5', 'w-24')}
@@ -821,8 +821,8 @@ export function PrescriptionDetails({
       {/* Frame Data */}
       <div className="border-2 border-amber-300 rounded-lg p-2 bg-amber-50/30">
         <div className="flex gap-2" dir="rtl">
-          <div className="bg-amber-200 text-amber-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
-            <Glasses className="w-6 h-6" />
+          <div className="bg-amber-200 text-amber-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
+            <Glasses className="w-5 h-5" />
           </div>
           <div className="flex-1 space-y-2">
             <div className="grid grid-cols-5 gap-2">
@@ -842,8 +842,8 @@ export function PrescriptionDetails({
       {/* Payment Data */}
       <div className="border-2 border-green-300 rounded-lg p-2 bg-green-50/30">
         <div className="flex gap-2" dir="rtl">
-          <div className="bg-green-200 text-green-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
-            <DollarSign className="w-6 h-6" />
+          <div className="bg-green-200 text-green-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
+            <DollarSign className="w-5 h-5" />
           </div>
           <div className="flex-1">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -865,7 +865,7 @@ export function PrescriptionDetails({
                   handleChange('amountToPay', newValue);
                 }
               }}
-              className="input text-base py-1.5 px-2 flex-1"
+              className="input text-sm py-1.5 px-2 flex-1"
               dir="ltr"
             />
           </div>
@@ -887,7 +887,7 @@ export function PrescriptionDetails({
                   handleChange('paid', newValue);
                 }
               }}
-              className="input text-base py-1.5 px-2 flex-1"
+              className="input text-sm py-1.5 px-2 flex-1"
               dir="ltr"
             />
           </div>

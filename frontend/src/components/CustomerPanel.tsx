@@ -230,73 +230,73 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
   };
 
   return (
-    <div className="card bg-slate-200/90">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-slate-800">פרטי לקוח</h2>
+    <div className="card bg-slate-200/90 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-lg font-bold text-slate-800">פרטי לקוח</h2>
           {onNavigate && !isEditing && (
-            <div className="flex gap-1">
+            <div className="flex gap-0.5">
               <button
                 onClick={() => onNavigate('prev')}
-                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                 title="לקוח קודם"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => onNavigate('next')}
-                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                className="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                 title="לקוח הבא"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
         {!isEditing ? (
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             {onDelete && (
               <button
                 onClick={() => onDelete(customer)}
-                className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
                 title="מחק לקוח"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4 h-4" />
               </button>
             )}
             {onDuplicate && (
               <button
                 onClick={() => onDuplicate(customer)}
-                className="p-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 transition-colors"
+                className="p-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 transition-colors"
                 title="שכפל לקוח"
               >
-                <Copy className="w-5 h-5" />
+                <Copy className="w-4 h-4" />
               </button>
             )}
             <button
               onClick={() => setIsEditing(true)}
-              className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
               title="ערוך"
             >
-              <Edit2 className="w-5 h-5" />
+              <Edit2 className="w-4 h-4" />
             </button>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <button
               onClick={handleSave}
               disabled={updateMutation.isPending}
-              className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors disabled:opacity-50"
               title="שמור"
             >
-              <Save className="w-5 h-5" />
+              <Save className="w-4 h-4" />
             </button>
             <button
               onClick={handleCancel}
-              className="p-2 rounded-lg bg-slate-50/80 hover:bg-slate-100/80 text-slate-600 transition-colors"
+              className="p-1.5 rounded-lg bg-slate-50/80 hover:bg-slate-100/80 text-slate-600 transition-colors"
               title="ביטול"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -316,7 +316,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="rtl"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.firstName || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.firstName || '-'}</div>
             )}
           </div>
           <div>
@@ -331,7 +331,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="rtl"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.lastName || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.lastName || '-'}</div>
             )}
           </div>
         </div>
@@ -349,7 +349,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.idNumber || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.idNumber || '-'}</div>
             )}
           </div>
           <div>
@@ -368,7 +368,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {customer.birthDate
                   ? format(new Date(customer.birthDate), 'dd/MM/yyyy')
                   : '-'}
@@ -393,7 +393,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.phone) || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.phone) || '-'}</div>
             )}
           </div>
           <div>
@@ -411,7 +411,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.mobile1) || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.mobile1) || '-'}</div>
             )}
           </div>
         </div>
@@ -474,7 +474,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
               </select>
             </div>
           ) : (
-            <div className="px-3 py-1 bg-gray-50 rounded-lg font-bold text-green-800">
+            <div className="px-2 py-0.5 bg-gray-50 rounded-lg font-bold text-green-800">
               {customer.street && customer.houseNumber
                 ? `${customer.street} ${customer.houseNumber}${customer.entrance ? `, ${customer.entrance}` : ''}${customer.apartment ? `, דירה ${customer.apartment}` : ''}${customer.city ? `, ${customer.city}` : ''}`
                 : '-'}
@@ -501,7 +501,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 ))}
               </select>
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.healthFund || '-'}</div>
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.healthFund || '-'}</div>
             )}
           </div>
           <div>
@@ -523,7 +523,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 ))}
               </select>
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {latestPrescription?.insuranceType || '-'}
               </div>
             )}
@@ -539,7 +539,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 onChange={(branchId) => handleChange('branchId', branchId)}
               />
             ) : (
-              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-2 py-0.5 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {customer.branch?.name || '-'}
               </div>
             )}

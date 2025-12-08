@@ -22,9 +22,13 @@ RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 # Copy rest of source code
 COPY . .
 
+# Copy and set permissions for migration script
+COPY scripts/run-migrations.sh /app/scripts/
+RUN chmod +x /app/scripts/run-migrations.sh
+
 # Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "run", "dev"]
+# Run migrations and start the application
+CMD ["/app/scripts/run-migrations.sh", "npm", "run", "dev"]
 
