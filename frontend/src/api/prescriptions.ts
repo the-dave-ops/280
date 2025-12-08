@@ -60,7 +60,7 @@ export const prescriptionsApi = {
   },
 
   generatePdf: async (id: number): Promise<Blob> => {
-    const response = await apiClient.post(`/prescriptions/${id}/generate-pdf`, null, {
+    const response = await apiClient.get(`/prescriptions/${id}/generate-pdf`, {
       responseType: 'blob',
     });
     return response.data;

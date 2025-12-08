@@ -568,7 +568,7 @@ router.get('/branch/:branchId/balance', async (req: Request, res: Response) => {
 });
 
 // Generate PDF for prescription
-router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
+router.get('/:id/generate-pdf', async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
 
@@ -592,42 +592,182 @@ router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
     const isPassport = customer.isPassport;
     const reportDate = prescription.updateDate || prescription.date;
 
-    // Create PDF
-    const doc = new PDFDocument({ margin: 50 });
-    const filename = `SICUM_${idNumber.slice(0, 8)}_${reportDate.toISOString().slice(0, 10).replace(/-/g, '')}_050_00663_${isPassport ? '9' : '1'}_001.pdf`;
+    // Create PDF with RTL support
+    const doc = new PDFDocument({ 
+      margin: 40,
+      size: 'A4',
+      info: {
+        Title: `מרשם משקפיים - ${customer.firstName} ${customer.lastName}`,
+        Author: 'רשת משקפיים 280'
+      }
+    });
+    // Create filename with proper encoding for Hebrew characters
+    const prescriptionNum = prescription.prescriptionNumber || prescription.id;
+    const safeLastName = customer.lastName ? customer.lastName.replace(/[^a-zA-Z0-9]/g, '_') : 'prescription';
+    const filename = `prescription_${prescriptionNum}_${safeLastName}.pdf`;
+    const encodedFilename = encodeURIComponent(`מרשם_${prescriptionNum}_${customer.lastName || ''}.pdf`);
 
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`);
 
     // Pipe PDF to response
     doc.pipe(res);
 
-    // Add content to PDF
-    doc.fontSize(20).text('Prescription Report', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12);
-    doc.text(`Customer: ${customer.firstName} ${customer.lastName}`);
-    doc.text(`ID: ${idNumber}`);
-    doc.text(`Date: ${reportDate.toLocaleDateString()}`);
-    doc.moveDown();
-    doc.text(`Type: ${prescription.type}`);
-    doc.text(`R: ${prescription.r || 'N/A'}`);
-    doc.text(`L: ${prescription.l || 'N/A'}`);
-    if (prescription.pdTotal) doc.text(`PD Total: ${prescription.pdTotal}`);
-    if (prescription.pdR) doc.text(`PD R: ${prescription.pdR}`);
-    if (prescription.pdL) doc.text(`PD L: ${prescription.pdL}`);
-    if (prescription.cylR) doc.text(`Cyl R: ${prescription.cylR}`);
-    if (prescription.axR) doc.text(`AX R: ${prescription.axR}`);
-    if (prescription.cylL) doc.text(`Cyl L: ${prescription.cylL}`);
-    if (prescription.axL) doc.text(`AX L: ${prescription.axL}`);
-    if (prescription.vaR) doc.text(`VA R: ${prescription.vaR}`);
-    if (prescription.vaL) doc.text(`VA L: ${prescription.vaL}`);
-    if (prescription.prismR) doc.text(`PRISM R: ${prescription.prismR}`);
-    if (prescription.prismL) doc.text(`PRISM L: ${prescription.prismL}`);
-    if (prescription.add) doc.text(`ADD: ${prescription.add}`);
-    doc.moveDown();
-    doc.text(`Price: ${prescription.price || 0} NIS`);
+    const pageWidth = doc.page.width;
+    const margin = 40;
+    let y = margin;
+
+    // Header with logo placeholder and title
+    doc.fontSize(24)
+       .fillColor('#1e40af')
+       .text('רשת משקפיים 280', margin, y, { align: 'center' });
+    y += 35;
+    
+    doc.fontSize(18)
+       .fillColor('#334155')
+       .text('מרשם משקפיים', margin, y, { align: 'center' });
+    y += 30;
+
+    // Horizontal line
+    doc.strokeColor('#cbd5e1')
+       .lineWidth(2)
+       .moveTo(margin, y)
+       .lineTo(pageWidth - margin, y)
+       .stroke();
+    y += 25;
+
+    // Customer Information Section
+    doc.fontSize(14)
+       .fillColor('#1e40af')
+       .text('פרטי לקוח', margin, y);
+    y += 20;
+
+    doc.fontSize(11)
+       .fillColor('#334155');
+    
+    const customerInfo = [
+      `שם: ${customer.firstName} ${customer.lastName}`,
+      `ת.ז: ${idNumber}`,
+      `טלפון: ${customer.mobile1 || customer.phone || 'לא צוין'}`,
+      `תאריך מרשם: ${new Date(prescription.date).toLocaleDateString('he-IL')}`
+    ];
+
+    customerInfo.forEach(info => {
+      doc.text(info, margin, y);
+      y += 18;
+    });
+    y += 10;
+
+    // Prescription Data Section
+    doc.fontSize(14)
+       .fillColor('#1e40af')
+       .text('נתוני מרשם', margin, y);
+    y += 25;
+
+    // Eye prescription table
+    doc.fontSize(10)
+       .fillColor('#334155');
+    
+    // Table headers
+    const colWidth = 60;
+    const startX = margin + 20;
+    doc.font('Helvetica-Bold');
+    doc.text('עין', startX, y);
+    doc.text('SPH', startX + colWidth, y);
+    doc.text('CYL', startX + colWidth * 2, y);
+    doc.text('Axis', startX + colWidth * 3, y);
+    doc.text('PD', startX + colWidth * 4, y);
+    doc.text('VA', startX + colWidth * 5, y);
+    y += 18;
+
+    // Right eye
+    doc.font('Helvetica');
+    doc.text('R', startX, y);
+    doc.text(prescription.r?.toFixed(2) || '-', startX + colWidth, y);
+    doc.text(prescription.cylR?.toFixed(2) || '-', startX + colWidth * 2, y);
+    doc.text(prescription.axR?.toString() || '-', startX + colWidth * 3, y);
+    doc.text(prescription.pdR?.toFixed(2) || '-', startX + colWidth * 4, y);
+    doc.text(prescription.vaR || '-', startX + colWidth * 5, y);
+    y += 18;
+
+    // Left eye
+    doc.text('L', startX, y);
+    doc.text(prescription.l?.toFixed(2) || '-', startX + colWidth, y);
+    doc.text(prescription.cylL?.toFixed(2) || '-', startX + colWidth * 2, y);
+    doc.text(prescription.axL?.toString() || '-', startX + colWidth * 3, y);
+    doc.text(prescription.pdL?.toFixed(2) || '-', startX + colWidth * 4, y);
+    doc.text(prescription.vaL || '-', startX + colWidth * 5, y);
+    y += 30;
+
+    // Additional fields
+    if (prescription.add || prescription.pdTotal || prescription.prismR || prescription.prismL) {
+      doc.font('Helvetica-Bold').text('נתונים נוספים:', margin, y);
+      y += 18;
+      doc.font('Helvetica');
+      
+      if (prescription.add) {
+        doc.text(`ADD: ${prescription.add.toFixed(2)}`, margin + 20, y);
+        y += 15;
+      }
+      if (prescription.pdTotal) {
+        doc.text(`PD Total: ${prescription.pdTotal.toFixed(2)}`, margin + 20, y);
+        y += 15;
+      }
+      if (prescription.prismR) {
+        doc.text(`PRISM R: ${prescription.prismR.toFixed(2)} ${prescription.inOutR || ''} ${prescription.upDownR || ''}`, margin + 20, y);
+        y += 15;
+      }
+      if (prescription.prismL) {
+        doc.text(`PRISM L: ${prescription.prismL.toFixed(2)} ${prescription.inOutL || ''} ${prescription.upDownL || ''}`, margin + 20, y);
+        y += 15;
+      }
+      y += 10;
+    }
+
+    // Frame information
+    if (prescription.frameName || prescription.frameModel || prescription.frameColor) {
+      doc.font('Helvetica-Bold').text('פרטי מסגרת:', margin, y);
+      y += 18;
+      doc.font('Helvetica');
+      
+      if (prescription.frameName) {
+        doc.text(`שם: ${prescription.frameName}`, margin + 20, y);
+        y += 15;
+      }
+      if (prescription.frameModel) {
+        doc.text(`דגם: ${prescription.frameModel}`, margin + 20, y);
+        y += 15;
+      }
+      if (prescription.frameColor) {
+        doc.text(`צבע: ${prescription.frameColor}`, margin + 20, y);
+        y += 15;
+      }
+      y += 10;
+    }
+
+    // Notes
+    if (prescription.notes || prescription.frameNotes) {
+      doc.font('Helvetica-Bold').text('הערות:', margin, y);
+      y += 18;
+      doc.font('Helvetica');
+      
+      if (prescription.notes) {
+        doc.text(`הערות עדשות: ${prescription.notes}`, margin + 20, y, { width: pageWidth - margin * 2 - 20 });
+        y += 25;
+      }
+      if (prescription.frameNotes) {
+        doc.text(`הערות מסגרת: ${prescription.frameNotes}`, margin + 20, y, { width: pageWidth - margin * 2 - 20 });
+        y += 25;
+      }
+    }
+
+    // Footer
+    const footerY = doc.page.height - 60;
+    doc.fontSize(9)
+       .fillColor('#64748b')
+       .text(`מספר מרשם: ${prescription.prescriptionNumber || prescription.id}`, margin, footerY, { align: 'center' });
+    doc.text(`תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}`, margin, footerY + 15, { align: 'center' });
 
     // Finalize PDF
     doc.end();

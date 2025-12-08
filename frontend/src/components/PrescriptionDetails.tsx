@@ -453,18 +453,25 @@ export function PrescriptionDetails({
         );
       }
       if (type === 'textarea') {
+        // Special styling for notes field - make it taller with placeholder
+        const isNotes = field === 'notes';
+        const minHeight = isNotes ? 'min-h-[80px]' : 'min-h-[40px]';
+        const rows = isNotes ? 3 : 1;
         const isBoldLabel = label === 'R' || label === 'L';
+        const textDir = isNotes ? 'rtl' : 'ltr'; // RTL for notes field
+        
         return (
-          <div className={`flex items-start gap-1 flex-row-reverse ${className}`} dir="ltr">
+          <div className={`flex ${isNotes ? 'flex-col' : 'items-start flex-row-reverse'} gap-1 ${className}`} dir="ltr">
             <textarea
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
               onKeyDown={handleEnterKeyNavigation}
-              className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
-              dir="ltr"
-              rows={1}
+              className={`input text-sm py-1 px-2 flex-1 ${minHeight}`}
+              placeholder={isNotes ? label : undefined}
+              dir={textDir}
+              rows={rows}
             />
-            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs font-semibold'} text-slate-600 whitespace-nowrap pt-1.5`}>{label}:</span>
+            {!isNotes && <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs font-semibold'} text-slate-600 whitespace-nowrap pt-1.5`}>{label}:</span>}
           </div>
         );
       }
@@ -556,20 +563,29 @@ export function PrescriptionDetails({
         );
       }
       if (type === 'textarea') {
+        // Special styling for frameNotes - make it taller
+        const isFrameNotes = field === 'frameNotes';
+        const minHeight = isFrameNotes ? 'min-h-[80px]' : 'min-h-[40px]';
+        const rows = isFrameNotes ? 3 : 1;
+        
         return (
-          <div className={`flex items-start gap-1 ${className}`} dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold pt-1.5">{label}:</span>
+          <div className={`flex ${isFrameNotes ? 'flex-col' : 'items-start'} gap-1 ${className}`} dir="rtl">
+            {!isFrameNotes && <span className="text-xs text-slate-600 whitespace-nowrap font-semibold pt-1.5">{label}:</span>}
             <textarea
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
               onKeyDown={handleEnterKeyNavigation}
-              className="input text-sm py-1 px-2 flex-1 min-h-[40px]"
+              className={`input text-sm py-1 px-2 flex-1 ${minHeight}`}
+              placeholder={isFrameNotes ? label : undefined}
               dir="rtl"
-              rows={1}
+              rows={rows}
             />
           </div>
         );
       }
+      // Check if receiptNumber is required but missing
+      const isReceiptNumberMissing = field === 'receiptNumber' && (!value || value === '');
+      
       return (
         <div className={`flex items-center gap-1 ${className}`} dir="rtl">
           <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">{label}:</span>
@@ -584,7 +600,7 @@ export function PrescriptionDetails({
               )
             }
             onKeyDown={handleEnterKeyNavigation}
-            className="input text-sm py-1.5 px-2 flex-1"
+            className={`input text-sm py-1.5 px-2 flex-1 ${isReceiptNumberMissing ? 'border-2 border-red-500 bg-red-50' : ''}`}
             dir="rtl"
           />
         </div>
@@ -623,13 +639,13 @@ export function PrescriptionDetails({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-1 mr-2" dir="ltr">
+          <div className="flex items-center gap-1 mr-2" dir="rtl">
             <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">תאריך:</span>
             <input
               type="date"
               value={format(new Date(prescription.date), 'yyyy-MM-dd')}
               onChange={(e) => handleChange('date', e.target.value)}
-              className="input text-xs py-0.5 px-1.5 w-32"
+              className="input text-sm py-1.5 px-2 w-36"
               dir="ltr"
             />
           </div>
@@ -807,13 +823,25 @@ export function PrescriptionDetails({
           <div className="bg-purple-200 text-purple-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
             <FileText className="w-5 h-5" />
           </div>
-          <div className="flex gap-1 w-full" dir="ltr">
-            {renderFieldLTR('PD Total', 'pdTotal', 'number', undefined, '0.5', 'w-24')}
-            {renderFieldLTR('Add', 'add', 'number', undefined, '0.25', 'w-24')}
-            {renderFieldLTR('index', 'index', 'select', indexOptions, undefined, 'w-24')}
-            {renderFieldLTR('color', 'color', 'text', undefined, undefined, 'w-32')}
-            {renderFieldLTR('%', 'colorPercentage', 'number', undefined, '0.1', 'w-20')}
-            {renderFieldLTR('הערות', 'notes', 'text', undefined, undefined, 'flex-1')}
+          <div className="flex-1 flex gap-2" dir="ltr">
+            {/* בלוק 1: הערות עדשות - חצי מהרוחב */}
+            <div className="flex-1">
+              {renderFieldLTR('הערות עדשות', 'notes', 'textarea')}
+            </div>
+            {/* בלוק 2: 5 שדות בשתי שורות - חצי מהרוחב */}
+            <div className="flex-1 grid grid-cols-3 gap-2 content-start">
+              {/* PD Total - Read-only calculated field */}
+              <div className="flex items-center gap-1" dir="ltr">
+                <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">PD Total:</span>
+                <div className="px-2 py-1.5 bg-blue-50/60 rounded text-sm flex-1 min-h-[32px] flex items-center font-semibold text-blue-800 border border-blue-200">
+                  {formData.pdTotal !== null && formData.pdTotal !== undefined ? Number(formData.pdTotal).toFixed(2) : ''}
+                </div>
+              </div>
+              {renderFieldLTR('Add', 'add', 'number', undefined, '0.25')}
+              {renderFieldLTR('index', 'index', 'select', indexOptions)}
+              {renderFieldLTR('color', 'color', 'text')}
+              {renderFieldLTR('%', 'colorPercentage', 'number', undefined, '0.1')}
+            </div>
           </div>
         </div>
       </div>
@@ -824,16 +852,18 @@ export function PrescriptionDetails({
           <div className="bg-amber-200 text-amber-800 p-1.5 rounded-md flex items-center justify-center" style={{ minWidth: '28px', minHeight: '28px' }}>
             <Glasses className="w-5 h-5" />
           </div>
-          <div className="flex-1 space-y-2">
-            <div className="grid grid-cols-5 gap-2">
+          <div className="flex-1 flex gap-2">
+            {/* בלוק 1: 5 שדות בשתי שורות - חצי מהרוחב */}
+            <div className="flex-1 grid grid-cols-3 gap-2 content-start">
               {renderFieldRTL('שם', 'frameName', 'text')}
               {renderFieldRTL('דגם', 'frameModel', 'text')}
               {renderFieldRTL('צבע', 'frameColor', 'select', frameColorOptions)}
               {renderFieldRTL('גשר', 'frameBridge', 'text')}
               {renderFieldRTL('רוחב', 'frameWidth', 'text')}
-              <div className="col-span-3">
-                {renderFieldRTL('הערות מסגרת', 'frameNotes', 'textarea')}
-              </div>
+            </div>
+            {/* בלוק 2: הערות מסגרת - חצי מהרוחב */}
+            <div className="flex-1">
+              {renderFieldRTL('הערות מסגרת', 'frameNotes', 'textarea')}
             </div>
           </div>
         </div>
