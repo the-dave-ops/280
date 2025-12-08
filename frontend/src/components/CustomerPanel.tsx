@@ -42,14 +42,24 @@ interface CustomerPanelProps {
   onDuplicate?: (customer: Customer) => void;
   onDelete?: (customer: Customer) => void;
   onNavigate?: (direction: 'prev' | 'next') => void;
+  onNavigateToCustomer?: (customerId: number) => void;
   startInEditMode?: boolean;
 }
 
-export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNavigate, startInEditMode }: CustomerPanelProps) {
+export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNavigate, onNavigateToCustomer, startInEditMode }: CustomerPanelProps) {
   const [isEditing, setIsEditing] = useState(startInEditMode || false);
   const [formData, setFormData] = useState<Partial<Customer>>(customer);
   const [insuranceType, setInsuranceType] = useState<string>('');
+  const [selectedRelatedIds, setSelectedRelatedIds] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const queryClient = useQueryClient();
+
+  // Get all customers for related customers dropdown
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ['customers', 'all'],
+    queryFn: () => customersApi.getAll({ limit: 1000 }),
+    enabled: isEditing,
+  });
 
   // Get latest prescription for insurance type
   const latestPrescription = useMemo(() => {
@@ -82,6 +92,47 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
       setFormData(customer);
     }
   }, [customer, isEditing]);
+
+  // Initialize selected related IDs when entering edit mode
+  useEffect(() => {
+    if (isEditing && customer.relatedTo) {
+      setSelectedRelatedIds(customer.relatedTo.map(r => r.id));
+    }
+  }, [isEditing, customer.relatedTo]);
+
+  // Filter customers based on search query
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    return allCustomers
+      .filter(c => c.id !== customer.id && !selectedRelatedIds.includes(c.id))
+      .filter(c => {
+        const fullName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+        const phone = c.phone?.toLowerCase() || '';
+        const mobile1 = c.mobile1?.toLowerCase() || '';
+        const idNumber = c.idNumber?.toLowerCase() || '';
+        
+        return fullName.includes(query) || 
+               phone.includes(query) || 
+               mobile1.includes(query) ||
+               idNumber.includes(query);
+      })
+      .slice(0, 10); // Limit to 10 results
+  }, [searchQuery, allCustomers, customer.id, selectedRelatedIds]);
+
+  // Add related customer
+  const handleAddRelated = (customerId: number) => {
+    if (!selectedRelatedIds.includes(customerId)) {
+      setSelectedRelatedIds([...selectedRelatedIds, customerId]);
+      setSearchQuery('');
+    }
+  };
+
+  // Remove related customer
+  const handleRemoveRelated = (customerId: number) => {
+    setSelectedRelatedIds(selectedRelatedIds.filter(id => id !== customerId));
+  };
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Customer>) => customersApi.update(customer.id, data),
@@ -146,6 +197,11 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
         }
       }
     });
+    
+    // Add related customer IDs if they were selected
+    if (selectedRelatedIds.length > 0) {
+      cleanData.relatedCustomerIds = selectedRelatedIds;
+    }
     
     console.log('Sending customer update:', cleanData);
     updateMutation.mutate(cleanData);
@@ -246,8 +302,8 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
         )}
       </div>
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="label">שם פרטי</label>
             {isEditing ? (
@@ -260,7 +316,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="rtl"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.firstName || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.firstName || '-'}</div>
             )}
           </div>
           <div>
@@ -275,12 +331,12 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="rtl"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.lastName || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.lastName || '-'}</div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">תעודת זהות</label>
             {isEditing ? (
@@ -293,7 +349,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.idNumber || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.idNumber || '-'}</div>
             )}
           </div>
           <div>
@@ -312,7 +368,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {customer.birthDate
                   ? format(new Date(customer.birthDate), 'dd/MM/yyyy')
                   : '-'}
@@ -321,7 +377,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">טלפון</label>
             {isEditing ? (
@@ -337,7 +393,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.phone) || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.phone) || '-'}</div>
             )}
           </div>
           <div>
@@ -355,7 +411,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 dir="ltr"
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.mobile1) || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{formatPhoneNumber(customer.mobile1) || '-'}</div>
             )}
           </div>
         </div>
@@ -418,7 +474,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
               </select>
             </div>
           ) : (
-            <div className="px-4 py-2 bg-gray-50 rounded-lg font-bold text-green-800">
+            <div className="px-3 py-1 bg-gray-50 rounded-lg font-bold text-green-800">
               {customer.street && customer.houseNumber
                 ? `${customer.street} ${customer.houseNumber}${customer.entrance ? `, ${customer.entrance}` : ''}${customer.apartment ? `, דירה ${customer.apartment}` : ''}${customer.city ? `, ${customer.city}` : ''}`
                 : '-'}
@@ -426,7 +482,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">קופת חולים</label>
             {isEditing ? (
@@ -445,7 +501,7 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 ))}
               </select>
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.healthFund || '-'}</div>
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">{customer.healthFund || '-'}</div>
             )}
           </div>
           <div>
@@ -467,14 +523,14 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 ))}
               </select>
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {latestPrescription?.insuranceType || '-'}
               </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">סניף</label>
             {isEditing ? (
@@ -483,11 +539,113 @@ export function CustomerPanel({ customer, onUpdate, onDuplicate, onDelete, onNav
                 onChange={(branchId) => handleChange('branchId', branchId)}
               />
             ) : (
-              <div className="px-4 py-2 bg-slate-50/60 rounded-lg font-bold text-green-800">
+              <div className="px-3 py-1 bg-slate-50/60 rounded-lg font-bold text-green-800">
                 {customer.branch?.name || '-'}
               </div>
             )}
           </div>
+        </div>
+
+        {/* Related Customers */}
+        <div className="mt-3 pt-3 border-t border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-700 mb-2">לקוחות קשורים</h3>
+          
+          {isEditing ? (
+            <div className="space-y-2">
+              {/* Search input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="חפש לקוח (שם, טלפון, ת.ז.)"
+                  className="input text-sm w-full"
+                  dir="rtl"
+                />
+                {/* Search results dropdown */}
+                {filteredCustomers.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {filteredCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => handleAddRelated(c.id)}
+                        className="w-full px-3 py-2 text-right hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm">
+                            <span className="font-medium text-slate-800">{c.firstName} {c.lastName}</span>
+                            {c.idNumber && <span className="text-slate-500 text-xs mr-2">• {c.idNumber}</span>}
+                          </div>
+                          {c.phone && <span className="text-xs text-slate-600">{c.phone}</span>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Selected related customers */}
+              {selectedRelatedIds.length > 0 && (
+                <div className="space-y-1">
+                  {selectedRelatedIds.map((id) => {
+                    const related = allCustomers.find(c => c.id === id);
+                    if (!related) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center justify-between px-2 py-1 bg-blue-50 rounded text-xs border border-blue-200"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-800">
+                            {related.firstName} {related.lastName}
+                          </span>
+                          {related.idNumber && (
+                            <span className="text-slate-500">• {related.idNumber}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleRemoveRelated(id)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="הסר"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            customer.relatedTo && customer.relatedTo.length > 0 ? (
+              <div className="space-y-1">
+                {customer.relatedTo.map((related) => (
+                  <button
+                    key={related.id}
+                    onClick={() => {
+                      console.log('Navigating to related customer:', related.id, related.firstName, related.lastName);
+                      onNavigateToCustomer?.(related.id);
+                    }}
+                    className="w-full flex items-center justify-between px-2 py-1 bg-slate-50 rounded text-xs hover:bg-blue-50 hover:border-blue-200 transition-colors border border-transparent cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-800">
+                        {related.firstName} {related.lastName}
+                      </span>
+                      {related.idNumber && (
+                        <span className="text-slate-500">• {related.idNumber}</span>
+                      )}
+                    </div>
+                    {related.phone && (
+                      <span className="text-slate-600">{related.phone}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">אין לקוחות קשורים</p>
+            )
+          )}
         </div>
       </div>
     </div>

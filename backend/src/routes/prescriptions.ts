@@ -16,23 +16,44 @@ const prescriptionCreateSchema = z.object({
   date: z.string().optional(),
   r: z.number().nullable().optional(),
   l: z.number().nullable().optional(),
-  pd: z.number().nullable().optional(),
   cylR: z.number().nullable().optional(),
   cylL: z.number().nullable().optional(),
   axR: z.number().nullable().optional(),
   axL: z.number().nullable().optional(),
   vaR: z.string().nullable().optional(),
   vaL: z.string().nullable().optional(),
+  
+  // PRISM fields
+  prismR: z.number().nullable().optional(),
+  prismL: z.number().nullable().optional(),
+  inOutR: z.string().nullable().optional(),
+  inOutL: z.string().nullable().optional(),
+  upDownR: z.string().nullable().optional(),
+  upDownL: z.string().nullable().optional(),
+  
+  // PD fields (replaced old 'pd' field)
+  pdR: z.number().nullable().optional(),
+  pdL: z.number().nullable().optional(),
+  pdTotal: z.number().nullable().optional(),
+  
+  // Height fields
+  heightR: z.number().nullable().optional(),
+  heightL: z.number().nullable().optional(),
+  
   add: z.number().nullable().optional(),
   index: z.string().nullable().optional(),
   color: z.string().nullable().optional(),
   colorPercentage: z.number().nullable().optional(),
+  
+  // Frame fields
   frameName: z.string().nullable().optional(),
   frameModel: z.string().nullable().optional(),
   frameColor: z.string().nullable().optional(),
-  frameC: z.string().nullable().optional(),
+  frameBridge: z.string().nullable().optional(), // New field (replaced frameC)
   frameWidth: z.string().nullable().optional(),
   frameNotes: z.string().nullable().optional(),
+  
+  // Financial and other fields
   healthFund: z.string().nullable().optional(),
   insuranceType: z.string().nullable().optional(),
   discountSource: z.string().nullable().optional(),
@@ -398,15 +419,33 @@ router.post('/:id/convert-to-reading', async (req: Request, res: Response) => {
         date: new Date(),
         r: (original.r || 0) + original.add,
         l: (original.l || 0) + original.add,
-        pd: (original.pd || 0) - 3,
+        pdTotal: (original.pdTotal || 0) - 3,
+        pdR: original.pdR,
+        pdL: original.pdL,
         cylR: original.cylR,
         axR: original.axR,
         cylL: original.cylL,
         axL: original.axL,
+        vaR: original.vaR,
+        vaL: original.vaL,
+        prismR: original.prismR,
+        prismL: original.prismL,
+        inOutR: original.inOutR,
+        inOutL: original.inOutL,
+        upDownR: original.upDownR,
+        upDownL: original.upDownL,
+        heightR: original.heightR,
+        heightL: original.heightL,
         add: original.add,
         index: original.index,
         color: original.color,
         colorPercentage: original.colorPercentage,
+        frameName: original.frameName,
+        frameModel: original.frameModel,
+        frameColor: original.frameColor,
+        frameBridge: original.frameBridge,
+        frameWidth: original.frameWidth,
+        frameNotes: original.frameNotes,
         discountSource: original.discountSource,
         campaign280: original.campaign280,
         optometristId: original.optometristId,
@@ -575,11 +614,17 @@ router.post('/:id/generate-pdf', async (req: Request, res: Response) => {
     doc.text(`Type: ${prescription.type}`);
     doc.text(`R: ${prescription.r || 'N/A'}`);
     doc.text(`L: ${prescription.l || 'N/A'}`);
-    doc.text(`PD: ${prescription.pd || 'N/A'}`);
+    if (prescription.pdTotal) doc.text(`PD Total: ${prescription.pdTotal}`);
+    if (prescription.pdR) doc.text(`PD R: ${prescription.pdR}`);
+    if (prescription.pdL) doc.text(`PD L: ${prescription.pdL}`);
     if (prescription.cylR) doc.text(`Cyl R: ${prescription.cylR}`);
     if (prescription.axR) doc.text(`AX R: ${prescription.axR}`);
     if (prescription.cylL) doc.text(`Cyl L: ${prescription.cylL}`);
     if (prescription.axL) doc.text(`AX L: ${prescription.axL}`);
+    if (prescription.vaR) doc.text(`VA R: ${prescription.vaR}`);
+    if (prescription.vaL) doc.text(`VA L: ${prescription.vaL}`);
+    if (prescription.prismR) doc.text(`PRISM R: ${prescription.prismR}`);
+    if (prescription.prismL) doc.text(`PRISM L: ${prescription.prismL}`);
     if (prescription.add) doc.text(`ADD: ${prescription.add}`);
     doc.moveDown();
     doc.text(`Price: ${prescription.price || 0} NIS`);

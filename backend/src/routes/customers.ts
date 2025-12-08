@@ -26,6 +26,7 @@ const customerCreateSchema = z.object({
   employeeId: z.number().nullable().optional(),
   computerId: z.number().nullable().optional(),
   branchId: z.number().nullable().optional(),
+  relatedCustomerIds: z.array(z.number()).optional(),
 });
 
 const customerUpdateSchema = customerCreateSchema.partial();
@@ -122,6 +123,15 @@ router.get('/:id', async (req: Request, res: Response) => {
           orderBy: { date: 'desc' },
         },
         branch: true,
+        relatedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            idNumber: true,
+            phone: true,
+          },
+        },
       },
     });
 
@@ -255,10 +265,18 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Parse dates and clean up data - remove undefined, convert null strings to null, convert dates
     const updateData: any = {};
+    let relatedCustomerIds: number[] | undefined;
+    
     Object.keys(data).forEach((key) => {
       const value = data[key as keyof typeof data];
       // Skip undefined values
       if (value === undefined) {
+        return;
+      }
+      
+      // Handle relatedCustomerIds separately
+      if (key === 'relatedCustomerIds') {
+        relatedCustomerIds = value as number[];
         return;
       }
       
@@ -281,13 +299,86 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     console.log('Update data:', JSON.stringify(updateData, null, 2));
 
-    const customer = await prisma.customer.update({
+    // Update customer first
+    let customer = await prisma.customer.update({
       where: { id },
       data: updateData,
       include: {
         branch: true,
+        relatedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            idNumber: true,
+            phone: true,
+          },
+        },
       },
     });
+
+    // Handle relatedTo separately if provided
+    if (relatedCustomerIds !== undefined) {
+      // Get current related customers
+      const currentRelated = await prisma.customer.findUnique({
+        where: { id },
+        select: {
+          relatedTo: { select: { id: true } },
+        },
+      });
+
+      const currentIds = currentRelated?.relatedTo.map(r => r.id) || [];
+      const toDisconnect = currentIds.filter(cid => !relatedCustomerIds.includes(cid));
+      const toConnect = relatedCustomerIds.filter(rid => !currentIds.includes(rid));
+
+      // Update relations (bidirectional)
+      customer = await prisma.customer.update({
+        where: { id },
+        data: {
+          relatedTo: {
+            disconnect: toDisconnect.map(cid => ({ id: cid })),
+            connect: toConnect.map(rid => ({ id: rid })),
+          },
+        },
+        include: {
+          branch: true,
+          relatedTo: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              idNumber: true,
+              phone: true,
+            },
+          },
+        },
+      });
+
+      // Also update the reverse relations for bidirectional connection
+      // For each newly connected customer, connect them back to this customer
+      for (const relatedId of toConnect) {
+        await prisma.customer.update({
+          where: { id: relatedId },
+          data: {
+            relatedTo: {
+              connect: { id },
+            },
+          },
+        });
+      }
+
+      // For each disconnected customer, disconnect them from this customer
+      for (const relatedId of toDisconnect) {
+        await prisma.customer.update({
+          where: { id: relatedId },
+          data: {
+            relatedTo: {
+              disconnect: { id },
+            },
+          },
+        });
+      }
+    }
 
     res.json({ customer });
   } catch (error) {

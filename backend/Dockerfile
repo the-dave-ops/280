@@ -1,7 +1,9 @@
 FROM node:18-slim
 
-# Install OpenSSL for Prisma
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL and CA certificates for Prisma
+RUN apt-get update -y && \
+    apt-get install -y openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -14,8 +16,8 @@ RUN npm install
 # Copy Prisma schema
 COPY prisma ./prisma
 
-# Generate Prisma client (doesn't need DATABASE_URL)
-RUN npx prisma generate
+# Generate Prisma client with SSL verification disabled for binaries download
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 
 # Copy rest of source code
 COPY . .

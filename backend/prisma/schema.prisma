@@ -37,6 +37,10 @@ model Customer {
 
   prescriptions   Prescription[]
   branch          Branch?   @relation(fields: [branchId], references: [id])
+  
+  // Related customers (family members, etc.)
+  relatedTo       Customer[] @relation("CustomerRelations")
+  relatedFrom     Customer[] @relation("CustomerRelations")
 
   @@map("customers")
   @@index([idNumber])
@@ -51,23 +55,51 @@ model Prescription {
   customerId        Int       @map("customer_id")
   type              String    @db.VarChar(50) // "מרחק", "קריאה", "עדשות מגע"
   date              DateTime  @default(now())
-  r                 Float?    // Right eye sphere (number)
-  l                 Float?    // Left eye sphere (number)
-  pd                Float?    // Pupillary Distance
-  cylR              Float?    @map("cyl_r") // Right cylinder
-  axR               Float?    @map("ax_r") // Right axis
-  cylL              Float?    @map("cyl_l") // Left cylinder
-  axL               Float?    @map("ax_l") // Left axis
+  
+  // Prescription data for eyes
+  r                 Float?    // Right eye sphere (SPH)
+  l                 Float?    // Left eye sphere (SPH)
+  cylR              Float?    @map("cyl_r") // Right cylinder (CYL)
+  axR               Float?    @map("ax_r") // Right axis (Axis)
+  cylL              Float?    @map("cyl_l") // Left cylinder (CYL)
+  axL               Float?    @map("ax_l") // Left axis (Axis)
+  
+  // PRISM data (0.25-4.00 in steps of 0.25)
+  prismR            Float?    @map("prism_r") // Right eye prism
+  prismL            Float?    @map("prism_l") // Left eye prism
+  
+  // IN/OUT direction (in, out)
+  inOutR            String?   @map("in_out_r") @db.VarChar(10) // Right eye in/out
+  inOutL            String?   @map("in_out_l") @db.VarChar(10) // Left eye in/out
+  
+  // UP/DOWN direction (up, down)
+  upDownR           String?   @map("up_down_r") @db.VarChar(10) // Right eye up/down
+  upDownL           String?   @map("up_down_l") @db.VarChar(10) // Left eye up/down
+  
+  // PD - Pupillary Distance (20.00-40.00 in steps of 0.5)
+  pdR               Float?    @map("pd_r") // Right eye PD
+  pdL               Float?    @map("pd_l") // Left eye PD
+  pdTotal           Float?    @map("pd_total") // Total PD (sum of pdR + pdL)
+  
+  // VA - Visual Acuity (6/5, 6/6, 6/7, 6/8, 6/9, 6/12, 6/18, 6/24, 6/36, 6/120)
   vaR               String?   @map("va_r") @db.VarChar(50) // Right eye visual acuity
   vaL               String?   @map("va_l") @db.VarChar(50) // Left eye visual acuity
+  
+  // Height (16.00-35.00 in steps of 0.5)
+  heightR           Float?    @map("height_r") // Right eye height
+  heightL           Float?    @map("height_l") // Left eye height
+  
+  // General lens data
   add               Float?    // Addition for reading
-  index             String?   @db.VarChar(50)
-  color             String?   @db.VarChar(255)
+  index             String?   @default("1.56") @db.VarChar(50) // Index: 1.5, 1.56, 1.6, 1.67, 1.71, 1.74, 1.76, ייצור, סופר פלט, דק סכין
+  color             String?   @db.VarChar(255) // Lens color
   colorPercentage   Float?    @map("color_percentage")
+  
+  // Frame data
   frameName         String?   @map("frame_name") @db.VarChar(255) // Frame name
   frameModel        String?   @map("frame_model") @db.VarChar(255) // Frame model
-  frameColor        String?   @map("frame_color") @db.VarChar(255) // Frame color
-  frameC            String?   @map("frame_c") @db.VarChar(50) // Frame C
+  frameColor        String?   @map("frame_color") @db.VarChar(255) // Frame color: אדום, ירוק, כחול, חום, ורוד, זהב מט, זהב מבריק, כסף מבריק, כסף מט, ניקל, אפור, טורקיז, כתום, שחור-לבן, שחור, שקוף, אחר
+  frameBridge       String?   @map("frame_bridge") @db.VarChar(50) // Frame bridge
   frameWidth        String?   @map("frame_width") @db.VarChar(50) // Frame width
   frameNotes        String?   @map("frame_notes") @db.Text // Frame notes
   healthFund        String?   @map("health_fund") @db.VarChar(255) // Health fund for prescription

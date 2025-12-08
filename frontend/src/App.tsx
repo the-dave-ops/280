@@ -181,6 +181,12 @@ function App() {
                   
                   handleCustomerSelect(allCustomers[nextIndex]);
                 }}
+                onNavigateToCustomer={(customerId) => {
+                  const targetCustomer = allCustomers.find(c => c.id === customerId);
+                  if (targetCustomer) {
+                    handleCustomerSelect(targetCustomer);
+                  }
+                }}
                 startInEditMode={isDuplicatedCustomer}
 onDuplicate={async (customer) => {
                   try {

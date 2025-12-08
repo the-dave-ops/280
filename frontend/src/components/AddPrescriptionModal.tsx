@@ -3,10 +3,20 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { prescriptionsApi } from '../api/prescriptions';
 import type { Prescription, Customer } from '../types';
+import {
+  VA_OPTIONS,
+  INDEX_OPTIONS,
+  FRAME_COLOR_OPTIONS,
+  IN_OUT_OPTIONS,
+  UP_DOWN_OPTIONS,
+  getPrismOptions,
+  getPdOptions,
+  getHeightOptions,
+  calculatePdTotal,
+  FIELD_LABELS,
+} from '../constants/prescriptionFields';
 
 const healthFunds = ['מאוחדת', 'מכבי', 'לאומית', 'כללית'];
-const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.74'];
-const colorOptions = ['שקוף', 'כחול', 'חום', 'אפור', 'ירוק', 'ורוד', 'סגול', 'צהוב'];
 
 // Insurance types mapping for each health fund
 const insuranceTypesByHealthFund: Record<string, string[]> = {
@@ -163,53 +173,138 @@ export function AddPrescriptionModal({
             {/* R Row */}
             <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 mb-3">
               <h4 className="font-medium mb-3 text-blue-700">R (ימין)</h4>
-              <div className="grid grid-cols-4 gap-3">
+              
+              {/* שורה ראשונה - SPH, CYL, Axis, PRISM, PD, גובה */}
+              <div className="grid grid-cols-6 gap-2 mb-2">
                 <div>
-                  <label className="label text-sm">Number</label>
+                  <label className="label text-xs">SPH</label>
                   <input
                     type="number"
                     step="0.25"
                     value={formData.r || ''}
                     onChange={(e) => handleChange('r', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Cyl</label>
+                  <label className="label text-xs">CYL</label>
                   <input
                     type="number"
                     step="0.25"
                     value={formData.cylR || ''}
                     onChange={(e) => handleChange('cylR', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Ax</label>
+                  <label className="label text-xs">Axis</label>
                   <input
                     type="number"
                     step="1"
+                    min="0"
+                    max="180"
                     value={formData.axR || ''}
                     onChange={(e) => handleChange('axR', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Va</label>
+                  <label className="label text-xs">PRISM</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    max="4.00"
+                    value={formData.prismR || ''}
+                    onChange={(e) => handleChange('prismR', parseFloat(e.target.value) || null)}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">PD</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="20.00"
+                    max="40.00"
+                    value={formData.pdR || ''}
+                    onChange={(e) => {
+                      const newPdR = parseFloat(e.target.value) || null;
+                      handleChange('pdR', newPdR);
+                      if (newPdR && formData.pdL) {
+                        handleChange('pdTotal', calculatePdTotal(newPdR, formData.pdL));
+                      }
+                    }}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="31.5"
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">גובה</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="16.00"
+                    max="35.00"
+                    value={formData.heightR || ''}
+                    onChange={(e) => handleChange('heightR', parseFloat(e.target.value) || null)}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="25.0"
+                  />
+                </div>
+              </div>
+              
+              {/* שורה שנייה - In/Out, Up/Down, VA */}
+              <div className="grid grid-cols-6 gap-2">
+                <div className="col-span-3"></div> {/* רווח */}
+                <div>
+                  <label className="label text-xs">In/Out</label>
+                  <select
+                    value={formData.inOutR || ''}
+                    onChange={(e) => handleChange('inOutR', e.target.value || null)}
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {IN_OUT_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label text-xs">Up/Down</label>
+                  <select
+                    value={formData.upDownR || ''}
+                    onChange={(e) => handleChange('upDownR', e.target.value || null)}
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {UP_DOWN_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label text-xs">VA</label>
+                  <select
                     value={formData.vaR || ''}
                     onChange={(e) => handleChange('vaR', e.target.value || null)}
-                    className="input"
-                    dir="ltr"
-                    placeholder="6/6"
-                  />
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {VA_OPTIONS.map(va => (
+                      <option key={va} value={va}>{va}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -217,53 +312,138 @@ export function AddPrescriptionModal({
             {/* L Row */}
             <div className="bg-green-50/50 rounded-lg p-4 border border-green-100">
               <h4 className="font-medium mb-3 text-green-700">L (שמאל)</h4>
-              <div className="grid grid-cols-4 gap-3">
+              
+              {/* שורה ראשונה - SPH, CYL, Axis, PRISM, PD, גובה */}
+              <div className="grid grid-cols-6 gap-2 mb-2">
                 <div>
-                  <label className="label text-sm">Number</label>
+                  <label className="label text-xs">SPH</label>
                   <input
                     type="number"
                     step="0.25"
                     value={formData.l || ''}
                     onChange={(e) => handleChange('l', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Cyl</label>
+                  <label className="label text-xs">CYL</label>
                   <input
                     type="number"
                     step="0.25"
                     value={formData.cylL || ''}
                     onChange={(e) => handleChange('cylL', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0.00"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Ax</label>
+                  <label className="label text-xs">Axis</label>
                   <input
                     type="number"
                     step="1"
+                    min="0"
+                    max="180"
                     value={formData.axL || ''}
                     onChange={(e) => handleChange('axL', parseFloat(e.target.value) || null)}
-                    className="input"
+                    className="input text-sm"
                     dir="ltr"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="label text-sm">Va</label>
+                  <label className="label text-xs">PRISM</label>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    max="4.00"
+                    value={formData.prismL || ''}
+                    onChange={(e) => handleChange('prismL', parseFloat(e.target.value) || null)}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">PD</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="20.00"
+                    max="40.00"
+                    value={formData.pdL || ''}
+                    onChange={(e) => {
+                      const newPdL = parseFloat(e.target.value) || null;
+                      handleChange('pdL', newPdL);
+                      if (newPdL && formData.pdR) {
+                        handleChange('pdTotal', calculatePdTotal(formData.pdR, newPdL));
+                      }
+                    }}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="32.0"
+                  />
+                </div>
+                <div>
+                  <label className="label text-xs">גובה</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="16.00"
+                    max="35.00"
+                    value={formData.heightL || ''}
+                    onChange={(e) => handleChange('heightL', parseFloat(e.target.value) || null)}
+                    className="input text-sm"
+                    dir="ltr"
+                    placeholder="25.0"
+                  />
+                </div>
+              </div>
+              
+              {/* שורה שנייה - In/Out, Up/Down, VA */}
+              <div className="grid grid-cols-6 gap-2">
+                <div className="col-span-3"></div> {/* רווח */}
+                <div>
+                  <label className="label text-xs">In/Out</label>
+                  <select
+                    value={formData.inOutL || ''}
+                    onChange={(e) => handleChange('inOutL', e.target.value || null)}
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {IN_OUT_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label text-xs">Up/Down</label>
+                  <select
+                    value={formData.upDownL || ''}
+                    onChange={(e) => handleChange('upDownL', e.target.value || null)}
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {UP_DOWN_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="label text-xs">VA</label>
+                  <select
                     value={formData.vaL || ''}
                     onChange={(e) => handleChange('vaL', e.target.value || null)}
-                    className="input"
-                    dir="ltr"
-                    placeholder="6/6"
-                  />
+                    className="input text-sm"
+                  >
+                    <option value="">-</option>
+                    {VA_OPTIONS.map(va => (
+                      <option key={va} value={va}>{va}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -274,15 +454,16 @@ export function AddPrescriptionModal({
             <h3 className="font-semibold mb-4">נתונים כלליים</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Pd</label>
+                <label className="label">PD סה"כ</label>
                 <input
                   type="number"
                   step="0.5"
-                  value={formData.pd || ''}
-                  onChange={(e) => handleChange('pd', parseFloat(e.target.value) || null)}
+                  value={formData.pdTotal || ''}
+                  onChange={(e) => handleChange('pdTotal', parseFloat(e.target.value) || null)}
                   className="input"
                   dir="ltr"
-                  placeholder="0.0"
+                  placeholder="63.5"
+                  title="סה&quot;כ PD - מתחשב אוטומטית מ-pdR + pdL"
                 />
               </div>
               <div>
@@ -303,7 +484,7 @@ export function AddPrescriptionModal({
                   type="text"
                   value={formData.index || ''}
                   onChange={(e) => handleChange('index', e.target.value)}
-                  onKeyDown={(e) => handleArrowKeyNavigation(e, indexOptions, formData.index, (value) => handleChange('index', value))}
+                  onKeyDown={(e) => handleArrowKeyNavigation(e, INDEX_OPTIONS as unknown as string[], formData.index, (value) => handleChange('index', value))}
                   className="input"
                   dir="ltr"
                   placeholder="1.5, 1.56, 1.6..."
@@ -315,7 +496,7 @@ export function AddPrescriptionModal({
                   type="text"
                   value={formData.color || ''}
                   onChange={(e) => handleChange('color', e.target.value)}
-                  onKeyDown={(e) => handleArrowKeyNavigation(e, colorOptions, formData.color, (value) => handleChange('color', value))}
+                  onKeyDown={(e) => handleArrowKeyNavigation(e, FRAME_COLOR_OPTIONS as unknown as string[], formData.color, (value) => handleChange('color', value))}
                   className="input"
                   dir="rtl"
                   placeholder="שקוף, כחול, חום..."
@@ -411,14 +592,14 @@ export function AddPrescriptionModal({
                 />
               </div>
               <div>
-                <label className="label">C</label>
+                <label className="label">גשר</label>
                 <input
                   type="text"
-                  value={formData.frameC || ''}
-                  onChange={(e) => handleChange('frameC', e.target.value)}
+                  value={formData.frameBridge || ''}
+                  onChange={(e) => handleChange('frameBridge', e.target.value)}
                   className="input"
                   dir="ltr"
-                  placeholder="C"
+                  placeholder="18"
                 />
               </div>
               <div>

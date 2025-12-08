@@ -1,14 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Trash2, Copy, FileDown, RotateCcw, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Copy, FileDown, RotateCcw, Plus, ChevronLeft, ChevronRight, Eye, FileText, Glasses, DollarSign } from 'lucide-react';
 import { prescriptionsApi } from '../api/prescriptions';
+import { optometristsApi } from '../api/optometrists';
 import type { Prescription, Customer } from '../types';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 
 const healthFunds = ['מאוחדת', 'מכבי', 'לאומית', 'כללית'];
-const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.74'];
+const indexOptions = ['1.5', '1.56', '1.6', '1.67', '1.71', '1.74', '1.76', 'ייצור', 'סופר פלט', 'דק סכין'];
 const colorOptions = ['שקוף', 'כחול', 'חום', 'אפור', 'ירוק', 'ורוד', 'סגול', 'צהוב'];
+const frameColorOptions = ['אדום', 'ירוק', 'כחול', 'חום', 'ורוד', 'זהב מט', 'זהב מבריק', 'כסף מבריק', 'כסף מט', 'ניקל', 'אפור', 'טורקיז', 'כתום', 'שחור-לבן', 'שחור', 'שקוף', 'אחר'];
 
 // Insurance types mapping for each health fund
 const insuranceTypesByHealthFund: Record<string, string[]> = {
@@ -127,6 +129,12 @@ export function PrescriptionDetails({
     queryFn: () => prescriptionsApi.getAll({ customerId: customer.id }),
   });
 
+  // Get all optometrists for the dropdown
+  const { data: optometrists = [] } = useQuery({
+    queryKey: ['optometrists'],
+    queryFn: () => optometristsApi.getAll(),
+  });
+
   // Sort prescriptions by date (newest first) and find current index
   const sortedPrescriptions = useMemo(() => {
     return [...allPrescriptions].sort((a, b) => {
@@ -185,6 +193,19 @@ export function PrescriptionDetails({
 
   // Check if this is a new prescription (no ID yet)
   const isNewPrescription = !prescription.id;
+
+  // Auto-calculate pdTotal when pdR or pdL changes
+  useEffect(() => {
+    const pdR = formData.pdR;
+    const pdL = formData.pdL;
+    
+    if (pdR !== null && pdR !== undefined && pdL !== null && pdL !== undefined) {
+      const total = Number(pdR) + Number(pdL);
+      if (formData.pdTotal !== total) {
+        setFormData(prev => ({ ...prev, pdTotal: total }));
+      }
+    }
+  }, [formData.pdR, formData.pdL]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Prescription>) => {
@@ -397,7 +418,9 @@ export function PrescriptionDetails({
     type: 'text' | 'number' | 'select' | 'textarea' = 'text',
     options?: string[],
     step?: string,
-    className: string = ''
+    className: string = '',
+    min?: string,
+    max?: string
   ) => {
     const value = formData[field];
     const isBoldLabel = label === 'R' || label === 'L';
@@ -411,7 +434,7 @@ export function PrescriptionDetails({
     if (type === 'select' && options) {
         return (
           <div className={`flex items-center gap-1 ${className}`} dir="ltr">
-            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap`}>{label}:</span>
+            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs font-semibold'} text-slate-600 whitespace-nowrap`}>{label}:</span>
             <select
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
@@ -441,7 +464,7 @@ export function PrescriptionDetails({
               dir="ltr"
               rows={1}
             />
-            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap pt-1.5`}>{label}:</span>
+            <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs font-semibold'} text-slate-600 whitespace-nowrap pt-1.5`}>{label}:</span>
           </div>
         );
       }
@@ -455,10 +478,12 @@ export function PrescriptionDetails({
       
       return (
         <div className={`flex items-center gap-1 ${className}`} dir="ltr">
-          <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs'} text-slate-600 whitespace-nowrap`}>{label}:</span>
+          <span className={`${isBoldLabel ? 'text-base font-bold' : 'text-xs font-semibold'} text-slate-600 whitespace-nowrap`}>{label}:</span>
           <input
             type={type}
             step={step}
+            min={min}
+            max={max}
             value={value !== null && value !== undefined && shouldFormatDecimals ? Number(value).toFixed(2) : (value || '')}
             onChange={(e) =>
               handleChange(
@@ -512,7 +537,7 @@ export function PrescriptionDetails({
     if (type === 'select' && options) {
         return (
           <div className={`flex items-center gap-1 ${className}`} dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap">{label}:</span>
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">{label}:</span>
             <select
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
@@ -533,7 +558,7 @@ export function PrescriptionDetails({
       if (type === 'textarea') {
         return (
           <div className={`flex items-start gap-1 ${className}`} dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap pt-1.5">{label}:</span>
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold pt-1.5">{label}:</span>
             <textarea
               value={value || ''}
               onChange={(e) => handleChange(field, e.target.value || null)}
@@ -547,7 +572,7 @@ export function PrescriptionDetails({
       }
       return (
         <div className={`flex items-center gap-1 ${className}`} dir="rtl">
-          <span className="text-xs text-slate-600 whitespace-nowrap">{label}:</span>
+          <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">{label}:</span>
           <input
             type={type}
             step={step}
@@ -598,36 +623,15 @@ export function PrescriptionDetails({
               </span>
             </div>
           )}
-          <div className="flex items-center gap-1 mr-2" dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap">קופת חולים:</span>
-            <select
-              value={formData.healthFund || ''}
-              onChange={(e) => handleChange('healthFund', e.target.value || null)}
-              className="input text-xs py-0.5 px-1.5"
-              dir="rtl"
-            >
-              <option value="">השאר ריק</option>
-              {healthFunds.map((fund) => (
-                <option key={fund} value={fund}>
-                  {fund}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-slate-600 whitespace-nowrap">סוג ביטוח:</span>
-            <select
-              value={formData.insuranceType || ''}
-              onChange={(e) => handleChange('insuranceType', e.target.value || null)}
-              className="input text-xs py-0.5 px-1.5"
-              dir="rtl"
-              disabled={!formData.healthFund}
-            >
-              <option value="">השאר ריק</option>
-              {availableInsuranceTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-1 mr-2" dir="ltr">
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">תאריך:</span>
+            <input
+              type="date"
+              value={format(new Date(prescription.date), 'yyyy-MM-dd')}
+              onChange={(e) => handleChange('date', e.target.value)}
+              className="input text-xs py-0.5 px-1.5 w-32"
+              dir="ltr"
+            />
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -686,9 +690,9 @@ export function PrescriptionDetails({
       </div>
 
       {/* Basic Info */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex items-center gap-2 flex-wrap" dir="rtl">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 whitespace-nowrap min-w-[40px]">סוג:</span>
+          <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">סוג:</span>
           <div className="flex items-center gap-1">
             <select
               value={formData.type}
@@ -721,79 +725,130 @@ export function PrescriptionDetails({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-600 whitespace-nowrap min-w-[50px]">תאריך:</span>
-          <input
-            type="date"
-            value={format(new Date(prescription.date), 'yyyy-MM-dd')}
-            onChange={(e) => handleChange('date', e.target.value)}
-            className="input text-base py-1.5 px-2 flex-1"
-            dir="ltr"
-          />
+        {renderFieldRTL('קופת חולים', 'healthFund', 'select', healthFunds)}
+        {renderFieldRTL('סוג ביטוח', 'insuranceType', 'select', availableInsuranceTypes)}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">שם עובד:</span>
+          <select
+            value={formData.optometristId || ''}
+            onChange={(e) => handleChange('optometristId', e.target.value ? parseInt(e.target.value) : null)}
+            className="input text-sm py-1.5 px-2"
+            style={{ minWidth: '150px' }}
+          >
+            <option value="">השאר ריק</option>
+            {optometrists.map((opt: any) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Eye Prescription Data - R and L rows */}
-      <div className="space-y-2" dir="ltr">
-        <h3 className="text-sm font-semibold text-slate-700" dir="rtl">נתוני עיניים</h3>
-        
-        {/* R Row */}
-        <div className="bg-blue-50/50 rounded p-2 border border-blue-100">
-          <div className="grid grid-cols-4 gap-2">
-            {renderFieldLTR('R', 'r', 'number', undefined, '0.25')}
-            {renderFieldLTR('Cyl', 'cylR', 'number', undefined, '0.25')}
-            {renderFieldLTR('Ax', 'axR', 'number', undefined, '1')}
-            {renderFieldLTR('Va', 'vaR', 'text')}
+      <div className="border-2 border-blue-300 rounded-lg p-2 bg-blue-50/30">
+        <div className="flex gap-2">
+          <div className="bg-blue-200 text-blue-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
+            <Eye className="w-6 h-6" />
           </div>
-        </div>
+          <div className="flex-1 space-y-1" dir="ltr">
+            {/* Header Row with Labels */}
+            <div className="grid gap-1 px-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+              <div className="text-xs font-semibold text-slate-600 text-center"></div>
+              <div className="text-xs font-semibold text-slate-600 text-center">SPH</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">CYL</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">Axis</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">PRISM</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">PD</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">גובה</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">In/Out</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">Up/Down</div>
+              <div className="text-xs font-semibold text-slate-600 text-center">VA</div>
+            </div>
+            
+            {/* R Row */}
+            <div className="bg-blue-100 rounded p-1 border border-blue-200">
+              <div className="grid gap-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+                <div className="text-xs font-bold text-white bg-blue-600 rounded flex items-center justify-center py-1">R</div>
+                {renderFieldLTR('', 'r', 'number', undefined, '0.25')}
+                {renderFieldLTR('', 'cylR', 'number', undefined, '0.25')}
+                {renderFieldLTR('', 'axR', 'number', undefined, '1')}
+                {renderFieldLTR('', 'prismR', 'number', undefined, '0.25', '', '0.25', '4')}
+                {renderFieldLTR('', 'pdR', 'number', undefined, '0.5', '', '20', '40')}
+                {renderFieldLTR('', 'heightR', 'number', undefined, '0.5', '', '16', '35')}
+                {renderFieldLTR('', 'inOutR', 'select', ['in', 'out'])}
+                {renderFieldLTR('', 'upDownR', 'select', ['up', 'down'])}
+                {renderFieldLTR('', 'vaR', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+              </div>
+            </div>
 
-        {/* L Row */}
-        <div className="bg-green-50/50 rounded p-2 border border-green-100">
-          <div className="grid grid-cols-4 gap-2">
-            {renderFieldLTR('L', 'l', 'number', undefined, '0.25')}
-            {renderFieldLTR('Cyl', 'cylL', 'number', undefined, '0.25')}
-            {renderFieldLTR('Ax', 'axL', 'number', undefined, '1')}
-            {renderFieldLTR('Va', 'vaL', 'text')}
+            {/* L Row */}
+            <div className="bg-green-100 rounded p-1 border border-green-200">
+              <div className="grid gap-1" style={{ gridTemplateColumns: '0.8fr 1fr 1fr 1fr 1.2fr 1fr 1fr 1.5fr 1.5fr 1.5fr' }}>
+                <div className="text-xs font-bold text-white bg-green-600 rounded flex items-center justify-center py-1">L</div>
+                {renderFieldLTR('', 'l', 'number', undefined, '0.25')}
+                {renderFieldLTR('', 'cylL', 'number', undefined, '0.25')}
+                {renderFieldLTR('', 'axL', 'number', undefined, '1')}
+                {renderFieldLTR('', 'prismL', 'number', undefined, '0.25', '', '0.25', '4')}
+                {renderFieldLTR('', 'pdL', 'number', undefined, '0.5', '', '20', '40')}
+                {renderFieldLTR('', 'heightL', 'number', undefined, '0.5', '', '16', '35')}
+                {renderFieldLTR('', 'inOutL', 'select', ['in', 'out'])}
+                {renderFieldLTR('', 'upDownL', 'select', ['up', 'down'])}
+                {renderFieldLTR('', 'vaL', 'select', ['6/5', '6/6', '6/7', '6/8', '6/9', '6/12', '6/18', '6/24', '6/36', '6/120'])}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* General Data */}
-      <div className="space-y-2" dir="ltr">
-        <h3 className="text-sm font-semibold text-slate-700" dir="rtl">נתונים כלליים</h3>
-        <div className="flex gap-2 w-full">
-          {renderFieldLTR('Pd', 'pd', 'number', undefined, '0.5', 'flex-1')}
-          {renderFieldLTR('Add', 'add', 'number', undefined, '0.25', 'flex-1')}
-          {renderFieldLTR('index', 'index', 'text', undefined, undefined, 'flex-1')}
-          {renderFieldLTR('color', 'color', 'text', undefined, undefined, 'flex-1')}
-          {renderFieldLTR('%', 'colorPercentage', 'number', undefined, '0.1', 'flex-1')}
-        </div>
-        <div>
-          {renderFieldLTR('הערות', 'notes', 'textarea')}
+      <div className="border-2 border-purple-300 rounded-lg p-2 bg-purple-50/30">
+        <div className="flex gap-2">
+          <div className="bg-purple-200 text-purple-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
+            <FileText className="w-6 h-6" />
+          </div>
+          <div className="flex gap-1 w-full" dir="ltr">
+            {renderFieldLTR('PD Total', 'pdTotal', 'number', undefined, '0.5', 'w-24')}
+            {renderFieldLTR('Add', 'add', 'number', undefined, '0.25', 'w-24')}
+            {renderFieldLTR('index', 'index', 'select', indexOptions, undefined, 'w-24')}
+            {renderFieldLTR('color', 'color', 'text', undefined, undefined, 'w-32')}
+            {renderFieldLTR('%', 'colorPercentage', 'number', undefined, '0.1', 'w-20')}
+            {renderFieldLTR('הערות', 'notes', 'text', undefined, undefined, 'flex-1')}
+          </div>
         </div>
       </div>
 
       {/* Frame Data */}
-      <div className="space-y-2" dir="rtl">
-        <h3 className="text-sm font-semibold text-slate-700">נתוני מסגרת</h3>
-        <div className="grid grid-cols-5 gap-2">
-          {renderFieldRTL('שם', 'frameName', 'text')}
-          {renderFieldRTL('דגם', 'frameModel', 'text')}
-          {renderFieldRTL('צבע', 'frameColor', 'text')}
-          {renderFieldRTL('C', 'frameC', 'text')}
-          {renderFieldRTL('רוחב', 'frameWidth', 'text')}
-          <div className="col-span-3">
-            {renderFieldRTL('הערות מסגרת', 'frameNotes', 'textarea')}
+      <div className="border-2 border-amber-300 rounded-lg p-2 bg-amber-50/30">
+        <div className="flex gap-2" dir="rtl">
+          <div className="bg-amber-200 text-amber-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
+            <Glasses className="w-6 h-6" />
+          </div>
+          <div className="flex-1 space-y-2">
+            <div className="grid grid-cols-5 gap-2">
+              {renderFieldRTL('שם', 'frameName', 'text')}
+              {renderFieldRTL('דגם', 'frameModel', 'text')}
+              {renderFieldRTL('צבע', 'frameColor', 'select', frameColorOptions)}
+              {renderFieldRTL('גשר', 'frameBridge', 'text')}
+              {renderFieldRTL('רוחב', 'frameWidth', 'text')}
+              <div className="col-span-3">
+                {renderFieldRTL('הערות מסגרת', 'frameNotes', 'textarea')}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Payment Data */}
-      <div className="space-y-2 border-t pt-2" dir="rtl">
-        <h3 className="text-sm font-semibold text-slate-700">נתוני תשלום</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="border-2 border-green-300 rounded-lg p-2 bg-green-50/30">
+        <div className="flex gap-2" dir="rtl">
+          <div className="bg-green-200 text-green-800 p-2 rounded-md flex items-center justify-center" style={{ minWidth: '32px', minHeight: '32px' }}>
+            <DollarSign className="w-6 h-6" />
+          </div>
+          <div className="flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <div className="flex items-center gap-1" dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap">לתשלום:</span>
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">לתשלום:</span>
             <input
               type="number"
               step="0.01"
@@ -815,7 +870,7 @@ export function PrescriptionDetails({
             />
           </div>
           <div className="flex items-center gap-1" dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap">שולם:</span>
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">שולם:</span>
             <input
               type="number"
               step="0.01"
@@ -837,12 +892,14 @@ export function PrescriptionDetails({
             />
           </div>
           <div className="flex items-center gap-1" dir="rtl">
-            <span className="text-xs text-slate-600 whitespace-nowrap">יתרה:</span>
+            <span className="text-xs text-slate-600 whitespace-nowrap font-semibold">יתרה:</span>
             <div className="px-2 py-1.5 bg-slate-50/60 rounded text-base flex-1 min-h-[32px] flex items-center font-bold text-green-800">
               {prescription.balance || 0} ₪
             </div>
           </div>
-          {renderFieldRTL('מס\' קבלה', 'receiptNumber', 'text')}
+              {renderFieldRTL('מס\' קבלה', 'receiptNumber', 'text')}
+            </div>
+          </div>
         </div>
       </div>
 

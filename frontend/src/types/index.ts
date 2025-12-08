@@ -24,6 +24,15 @@ export interface Customer {
   updatedAt: string;
   prescriptions?: Prescription[];
   branch?: Branch;
+  relatedTo?: RelatedCustomer[];
+}
+
+export interface RelatedCustomer {
+  id: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  idNumber?: string | null;
+  phone?: string | null;
 }
 
 export interface Prescription {
@@ -32,25 +41,46 @@ export interface Prescription {
   customerId: number;
   type: 'מרחק' | 'קריאה' | 'עדשות מגע' | 'מולטיפוקל';
   date: string;
-  r?: number | null; // Right eye sphere (number)
-  l?: number | null; // Left eye sphere (number)
-  pd?: number | null;
+  r?: number | null; // Right eye sphere (SPH)
+  l?: number | null; // Left eye sphere (SPH)
   cylR?: number | null;
   axR?: number | null;
   cylL?: number | null;
   axL?: number | null;
   vaR?: string | null; // Right eye visual acuity
   vaL?: string | null; // Left eye visual acuity
+  
+  // PRISM fields
+  prismR?: number | null;
+  prismL?: number | null;
+  inOutR?: string | null; // 'in' | 'out'
+  inOutL?: string | null; // 'in' | 'out'
+  upDownR?: string | null; // 'up' | 'down'
+  upDownL?: string | null; // 'up' | 'down'
+  
+  // PD fields (replaced old 'pd' field)
+  pdR?: number | null;
+  pdL?: number | null;
+  pdTotal?: number | null;
+  
+  // Height fields
+  heightR?: number | null;
+  heightL?: number | null;
+  
   add?: number | null;
   index?: string | null;
   color?: string | null;
   colorPercentage?: number | null;
+  
+  // Frame fields
   frameName?: string | null;
   frameModel?: string | null;
   frameColor?: string | null;
-  frameC?: string | null;
+  frameBridge?: string | null; // New field
   frameWidth?: string | null;
   frameNotes?: string | null;
+  
+  // Financial fields
   healthFund?: string | null;
   insuranceType?: string | null;
   price?: number | null;
@@ -60,12 +90,16 @@ export interface Prescription {
   balance?: number | null;
   receiptNumber?: string | null;
   campaign280?: boolean | null;
+  
+  // Meta fields
   optometristId?: number | null;
   branchId?: number | null;
   source?: string | null;
   notes?: string | null;
   updateDate: string;
   createdAt: string;
+  
+  // Relations
   customer?: Customer;
   optometrist?: Optometrist;
   branch?: Branch;
