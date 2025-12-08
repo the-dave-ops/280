@@ -91,10 +91,10 @@ export function PrescriptionsScrollCards({
           <button
             key={prescription.id}
             onClick={() => onSelect(prescription)}
-            className={`w-full text-right p-1.5 rounded border-2 transition-all hover:shadow-md cursor-pointer ${
+            className={`w-full text-right p-2 rounded border transition-all hover:shadow-sm cursor-pointer ${
               selectedPrescription?.id === prescription.id
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-200 bg-white hover:border-primary-300 hover:bg-primary-50'
+                ? 'border-primary-400 bg-primary-50/50'
+                : 'border-gray-300 bg-slate-50/30 hover:border-primary-300 hover:bg-primary-50/30'
             }`}
           >
             <div className="flex items-center justify-between gap-2 text-xs">
@@ -125,7 +125,7 @@ export function PrescriptionsScrollCards({
                 )}
                 <div className="flex items-center gap-1 px-1.5 py-0.5 border border-gray-300 rounded" dir="ltr">
                   <span className="text-gray-500 text-xs">PD:</span>
-                  <span className="font-medium text-xs">{prescription.pd || '-'}</span>
+                  <span className="font-medium text-xs">{prescription.pdTotal?.toFixed(2) || '-'}</span>
                 </div>
               </div>
               {prescription.price && (

@@ -52,11 +52,13 @@ export function ManagementView({
   const totalPaid = prescriptions.reduce((sum, p) => sum + (p.paid || 0), 0);
   const totalBalance = prescriptions.reduce((sum, p) => sum + (p.balance || 0), 0);
 
-  // Get recent customers from prescriptions
-  const recentCustomers = prescriptions
-    .slice(0, 10)
-    .map((p) => p.customer)
-    .filter((c, index, self) => c && index === self.findIndex((t) => t?.id === c.id))
+  // Get recent customers - sort by most recent and get unique customers
+  const recentCustomers = allCustomers
+    .sort((a, b) => {
+      const dateA = a.admissionDate ? new Date(a.admissionDate).getTime() : 0;
+      const dateB = b.admissionDate ? new Date(b.admissionDate).getTime() : 0;
+      return dateB - dateA;
+    })
     .slice(0, 10);
 
   return (
@@ -201,25 +203,36 @@ function OverviewTab({
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">מרשמים אחרונים</h2>
-          <div className="space-y-3">
+          <h2 className="text-xl font-bold mb-3">מרשמים אחרונים</h2>
+          <div className="space-y-1">
             {prescriptions.slice(0, 10).map((prescription) => (
               <div
                 key={prescription.id}
                 onClick={() => handlePrescriptionClick(prescription)}
-                className="flex items-center justify-between p-3 bg-slate-50/60 rounded-lg hover:bg-slate-100/80 cursor-pointer transition-colors"
+                className="flex items-center justify-between gap-2 p-1.5 bg-slate-50/40 rounded border border-gray-200 hover:bg-slate-100/60 hover:border-primary-300 cursor-pointer transition-all text-xs"
+                dir="rtl"
               >
-                <div>
-                  <div className="font-medium">
+                <div className="flex items-center gap-2 flex-1">
+                  <span className="font-medium text-slate-800 px-1.5 py-0.5 border border-gray-300 rounded">
                     {prescription.customer?.firstName} {prescription.customer?.lastName}
-                  </div>
-                  <div className="text-sm text-slate-600">{prescription.type}</div>
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                    {prescription.type}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <div className="font-medium">{prescription.price || 0} ₪</div>
-                  <div className="text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-xs" dir="ltr">
+                  {prescription.price !== null && prescription.price !== undefined && (
+                    <span className="font-bold text-primary-600">₪ {prescription.price || 0}</span>
+                  )}
+                  <span className="text-slate-500">PD: {prescription.pdTotal?.toFixed(2) || '-'}</span>
+                  {prescription.add && (
+                    <span className="text-slate-500">ADD: {prescription.add.toFixed(2)}</span>
+                  )}
+                  <span className="text-slate-500">R: {prescription.r?.toFixed(2) || '-'}</span>
+                  <span className="text-slate-500">L: {prescription.l?.toFixed(2) || '-'}</span>
+                  <span className="text-slate-600 font-medium">
                     {new Date(prescription.date).toLocaleDateString('he-IL')}
-                  </div>
+                  </span>
                 </div>
               </div>
             ))}
@@ -227,26 +240,35 @@ function OverviewTab({
         </div>
 
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">לקוחות אחרונים</h2>
-          <div className="space-y-3">
+          <h2 className="text-xl font-bold mb-3">לקוחות אחרונים</h2>
+          <div className="space-y-1">
             {recentCustomers.length > 0 ? (
               recentCustomers.map((customer) => (
                 customer && (
                   <div
                     key={customer.id}
                     onClick={() => handleCustomerClick(customer)}
-                    className="flex items-center justify-between p-3 bg-slate-50/60 rounded-lg hover:bg-slate-100/80 cursor-pointer transition-colors"
+                    className="flex items-center justify-between gap-2 p-1.5 bg-slate-50/40 rounded border border-gray-200 hover:bg-slate-100/60 hover:border-primary-300 cursor-pointer transition-all text-xs"
+                    dir="rtl"
                   >
-                    <div>
-                      <div className="font-medium">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="font-medium text-slate-800 px-1.5 py-0.5 border border-gray-300 rounded">
                         {customer.firstName} {customer.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500">{customer.idNumber}</div>
+                      </span>
+                      <span className="text-slate-500">{customer.idNumber}</span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {customer.admissionDate
-                        ? new Date(customer.admissionDate).toLocaleDateString('he-IL')
-                        : '-'}
+                    <div className="flex items-center gap-2 text-xs">
+                      {customer.mobile1 && (
+                        <span className="text-slate-500" dir="ltr">☎ {customer.mobile1}</span>
+                      )}
+                      {customer.mobile2 && (
+                        <span className="text-slate-500" dir="ltr">☎ {customer.mobile2}</span>
+                      )}
+                      {(customer.city || customer.street || customer.houseNumber) && (
+                        <span className="text-slate-500">
+                          {customer.city}{customer.city && (customer.street || customer.houseNumber) ? ', ' : ''}{customer.street}{customer.street && customer.houseNumber ? ' ' : ''}{customer.houseNumber}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )

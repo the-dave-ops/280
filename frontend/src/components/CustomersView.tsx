@@ -236,14 +236,13 @@ export function CustomersView({ onCustomerSelect, branchId, onBackToBranches, on
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <colgroup>
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
               <col className="w-[11%]" />
               <col className="w-[11%]" />
               <col className="w-[11%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
               <col className="w-[11%]" />
-              <col className="w-[9%]" />
               <col className="w-[10%]" />
               <col className="w-[10%]" />
             </colgroup>
@@ -351,23 +350,7 @@ export function CustomersView({ onCustomerSelect, branchId, onBackToBranches, on
                     )}
                   </div>
                 </th>
-                <th
-                  className="text-right p-3 cursor-pointer hover:bg-slate-50/60 transition-colors select-none"
-                  onClick={() => handleSort('admissionDate')}
-                >
-                  <div className="flex items-center gap-1">
-                    <span>תאריך הצטרפות</span>
-                    {sortColumn === 'admissionDate' ? (
-                      sortDirection === 'asc' ? (
-                        <ChevronUp className="w-4 h-4 text-primary-600" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-primary-600" />
-                      )
-                    ) : (
-                      <ChevronsUpDown className="w-4 h-4 text-gray-400" />
-                    )}
-                  </div>
-                </th>
+
                 <th
                   className="text-right p-3 cursor-pointer hover:bg-slate-50/60 transition-colors select-none"
                   onClick={() => handleSort('healthFund')}
@@ -435,15 +418,10 @@ export function CustomersView({ onCustomerSelect, branchId, onBackToBranches, on
                     <td className="p-3 truncate">
                       <span className="font-medium">{customer.lastName || '-'}</span>
                     </td>
-                    <td className="p-3 text-gray-600 truncate">{customer.idNumber || '-'}</td>
-                    <td className="p-3 text-gray-600 truncate">{formatPhoneNumber(customer.phone) || '-'}</td>
-                    <td className="p-3 text-gray-600 truncate">{formatPhoneNumber(customer.mobile1) || '-'}</td>
+                    <td className="p-3 text-gray-600">{customer.idNumber || '-'}</td>
+                    <td className="p-3 text-gray-600">{formatPhoneNumber(customer.phone) || '-'}</td>
+                    <td className="p-3 text-gray-600">{formatPhoneNumber(customer.mobile1) || '-'}</td>
                     <td className="p-3 text-gray-600 truncate">{customer.city || '-'}</td>
-                    <td className="p-3 text-gray-600 truncate">
-                      {customer.admissionDate
-                        ? format(new Date(customer.admissionDate), 'dd/MM/yyyy')
-                        : '-'}
-                    </td>
                     <td className="p-3 text-gray-600 truncate">{customer.healthFund || '-'}</td>
                     <td className="p-3 text-gray-600 truncate">
                       {customer.prescriptions && customer.prescriptions.length > 0
@@ -457,7 +435,7 @@ export function CustomersView({ onCustomerSelect, branchId, onBackToBranches, on
                 ))
               ) : (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-gray-500">
+                  <td colSpan={9} className="p-8 text-center text-gray-500">
                     {searchQuery ? 'לא נמצאו לקוחות התואמים לחיפוש' : 'אין לקוחות'}
                   </td>
                 </tr>

@@ -18,6 +18,21 @@ export function PrescriptionsView({ onPrescriptionSelect }: PrescriptionsViewPro
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
+  const getHealthFundColor = (healthFund: string) => {
+    switch (healthFund) {
+      case 'מאוחדת':
+        return 'bg-orange-100 text-orange-700 border-orange-300';
+      case 'כללית':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'מכבי':
+        return 'bg-blue-100 text-blue-700 border-blue-300';
+      case 'לאומית':
+        return 'bg-lime-100 text-lime-700 border-lime-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-300';
+    }
+  };
+
   const { data: prescriptions = [], isLoading } = useQuery({
     queryKey: ['prescriptions', 'all'],
     queryFn: () => prescriptionsApi.getAll({ limit: '1000' }),
@@ -137,9 +152,9 @@ export function PrescriptionsView({ onPrescriptionSelect }: PrescriptionsViewPro
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-6">מרשמים</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">מרשמים</h1>
       </div>
 
       {/* Search Bar */}
@@ -309,18 +324,18 @@ export function PrescriptionsView({ onPrescriptionSelect }: PrescriptionsViewPro
                     onClick={() => handlePrescriptionClick(prescription)}
                     className="border-b hover:bg-slate-50/60 cursor-pointer transition-colors"
                   >
-                    <td className="p-3">
+                    <td className="p-1.5">
                       <span className="font-medium text-primary-600">
                         {prescription.prescriptionNumber || '-'}
                       </span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-1.5">
                       <div className="font-medium">
                         {prescription.customer?.firstName} {prescription.customer?.lastName}
                       </div>
                     </td>
-                    <td className="p-3 text-gray-600">{prescription.customer?.idNumber || '-'}</td>
-                    <td className="p-3">
+                    <td className="p-1.5 text-gray-600">{prescription.customer?.idNumber || '-'}</td>
+                    <td className="p-1.5">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
                           prescription.type === 'מרחק'
@@ -337,16 +352,22 @@ export function PrescriptionsView({ onPrescriptionSelect }: PrescriptionsViewPro
                         {prescription.type}
                       </span>
                     </td>
-                    <td className="p-3 text-gray-600">
+                    <td className="p-1.5 text-gray-600">
                       {format(new Date(prescription.date), 'dd/MM/yyyy')}
                     </td>
-                    <td className="p-3">
+                    <td className="p-1.5">
                       <span className="font-medium">{prescription.price || 0} ₪</span>
                     </td>
-                    <td className="p-3 text-gray-600">
-                      {prescription.healthFund || '-'}
+                    <td className="p-1.5">
+                      {prescription.healthFund ? (
+                        <span className={`px-2 py-1 rounded text-xs font-medium border ${getHealthFundColor(prescription.healthFund)}`}>
+                          {prescription.healthFund}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
-                    <td className="p-3">
+                    <td className="p-1.5">
                       <span
                         className={`font-medium ${
                           prescription.balance && prescription.balance > 0

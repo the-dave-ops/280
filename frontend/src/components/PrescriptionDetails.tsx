@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { Trash2, Copy, RotateCcw, Plus, ChevronLeft, ChevronRight, Eye, FileText, Glasses, DollarSign, Printer } from 'lucide-react';
+import { Trash2, Copy, Plus, ChevronLeft, ChevronRight, Eye, FileText, Glasses, DollarSign, Printer } from 'lucide-react';
 import { prescriptionsApi } from '../api/prescriptions';
 import { optometristsApi } from '../api/optometrists';
 import type { Prescription, Customer } from '../types';
@@ -28,11 +28,19 @@ const generatePrintHTML = (prescription: Prescription, customer: Customer) => `
     .customer-info { text-align: right; font-size: 10px; line-height: 1.4; }
     .title { text-align: center; font-size: 14px; font-weight: bold; margin: 8px 0; padding: 6px; background: #333; color: white; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; border: 2px solid #000; }
-    td { border: 1px solid #000; padding: 4px; text-align: center; }
-    td.label { background: #f0f0f0; font-weight: bold; text-align: right; width: 15%; }
-    td.value { font-size: 12px; font-weight: bold; }
-    tr.blue td.label { background: #e6f2ff; color: #0066cc; }
+    table.data-table { direction: ltr; }
+    table.info-table { direction: rtl; }
+    td { border: 1px solid #000; padding: 6px; text-align: center; }
+    td.label { background: white; color: rgba(0, 0, 0, 0.5); font-weight: bold; text-align: center; width: 15%; font-size: 10px; }
+    td.value { font-size: 14px; font-weight: bold; color: #000; }
+    tr.blue td.label { background: white; color: rgba(0, 0, 0, 0.5); }
     .footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #666; }
+    @media print {
+      table.data-table { direction: ltr !important; }
+      table.info-table { direction: rtl !important; }
+      td.label { background: white !important; color: rgba(0, 0, 0, 0.5) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      td.value { color: #000 !important; }
+    }
   </style>
 </head>
 <body>
@@ -47,7 +55,7 @@ const generatePrintHTML = (prescription: Prescription, customer: Customer) => `
     </div>
   </div>
   <div class="title">מרשם מס' ${prescription.prescriptionNumber || prescription.id} מתאריך ${new Date(prescription.date).toLocaleDateString('he-IL')}</div>
-  <table>
+  <table class="data-table">
     <tr>
       <td class="label">R:</td><td class="value">${prescription.r?.toFixed(2) || ''}</td>
       <td class="label">Cyl R:</td><td class="value">${prescription.cylR?.toFixed(2) || ''}</td>
@@ -68,15 +76,15 @@ const generatePrintHTML = (prescription: Prescription, customer: Customer) => `
       <td class="label">%:</td><td>${prescription.colorPercentage || ''}</td>
     </tr>
   </table>
-  <table>
+  <table class="info-table">
     <tr>
-      <td class="label" style="width:25%">קופ"ח:</td><td>${prescription.healthFund || ''}</td>
-      <td class="label" style="width:25%">מחירון:</td><td></td>
+      <td class="label" style="width:25%">קופ"ח:</td><td class="value">${prescription.healthFund || ''}</td>
+      <td class="label" style="width:25%">מחירון:</td><td class="value"></td>
     </tr>
-    <tr><td class="label">סוג ביטוח:</td><td colspan="3">${prescription.insuranceType || ''}</td></tr>
-    <tr><td class="label">מקור מרשם:</td><td colspan="3">${prescription.prescriptionSource || ''}</td></tr>
-    <tr><td class="label">מק"ט מסגרת:</td><td colspan="3">${prescription.frameSku || ''}</td></tr>
-    <tr><td class="label">הערות:</td><td colspan="3" style="font-size:10px">${prescription.notes || ''}</td></tr>
+    <tr><td class="label">סוג ביטוח:</td><td class="value" colspan="3">${prescription.insuranceType || ''}</td></tr>
+    <tr><td class="label">מקור מרשם:</td><td class="value" colspan="3">${prescription.prescriptionSource || ''}</td></tr>
+    <tr><td class="label">מק"ט מסגרת:</td><td class="value" colspan="3">${prescription.frameSku || ''}</td></tr>
+    <tr><td class="label">הערות:</td><td class="value" colspan="3" style="font-size:12px">${prescription.notes || ''}</td></tr>
   </table>
   <div style="margin: 12px 0; padding: 10px; background: #fff3cd; border: 2px solid #ffc107; border-radius: 4px; font-size: 10px; line-height: 1.6; text-align: right; color: #856404;">
     ידוע לי כי ההתקשרות עימי תיהיה באמצעות שליחת הודעת טקסט ו/או הודעה קולית ואני מאשר/ת לרשת 280 לעדכן אותי בכל דבר שנוגע לבניי המנוי לרשת. מבצעים, פרומוים שונים והטבות מעת לעת.תחילתם.
@@ -726,16 +734,6 @@ export function PrescriptionDetails({
           >
             <Copy className="w-4 h-4" />
           </button>
-          {prescription.type === 'מרחק' && prescription.add && prescription.add > 0 && (
-            <button
-              onClick={() => convertMutation.mutate()}
-              disabled={convertMutation.isPending}
-              className="p-1.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-600 transition-colors disabled:opacity-50"
-              title="המר לקריאה"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
           <button
             onClick={() => {
               const validation = validateAxisRequired(prescription);
