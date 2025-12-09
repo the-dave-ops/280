@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown, ArrowRight } from 'lucide-react';
+import Fuse from 'fuse.js';
 import { customersApi } from '../api/customers';
 import { branchesApi } from '../api/branches';
 import { prescriptionsApi } from '../api/prescriptions';
@@ -76,28 +77,35 @@ export function CustomersView({ onCustomerSelect, branchId, onBackToBranches, on
     }
   };
 
+  // Create Fuse.js instance for fast searching
+  const customersFuse = useMemo(() => {
+    if (customers.length === 0) return null;
+    return new Fuse(customers, {
+      keys: [
+        { name: 'firstName', weight: 2 },
+        { name: 'lastName', weight: 2 },
+        { name: 'idNumber', weight: 1.5 },
+        { name: 'phone', weight: 1 },
+        { name: 'mobile1', weight: 1 },
+        { name: 'mobile2', weight: 0.8 },
+        { name: 'city', weight: 0.5 },
+      ],
+      threshold: 0.3,
+      ignoreLocation: true,
+      minMatchCharLength: 1,
+    });
+  }, [customers]);
+
   // Filter and sort customers
   const filteredCustomers = useMemo(() => {
-    let filtered = customers.filter((customer) => {
-      if (!searchQuery.trim()) return true;
+    let filtered = customers;
 
-      const query = searchQuery.toLowerCase();
-      const firstName = customer.firstName?.toLowerCase() || '';
-      const lastName = customer.lastName?.toLowerCase() || '';
-      const idNumber = customer.idNumber?.toLowerCase() || '';
-      const phone = customer.phone?.toLowerCase() || '';
-      const mobile1 = customer.mobile1?.toLowerCase() || '';
-      const city = customer.city?.toLowerCase() || '';
-
-      return (
-        firstName.includes(query) ||
-        lastName.includes(query) ||
-        idNumber.includes(query) ||
-        phone.includes(query) ||
-        mobile1.includes(query) ||
-        city.includes(query)
-      );
-    });
+    // Fast search with Fuse.js
+    if (searchQuery.trim() && customersFuse) {
+      filtered = customersFuse
+        .search(searchQuery)
+        .map(result => result.item);
+    }
 
     // Sort customers
     if (sortColumn && sortDirection) {

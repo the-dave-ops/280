@@ -313,10 +313,22 @@ export function GlobalSearch({ onCustomerSelect, onPrescriptionSelect }: GlobalS
                           </div>
                           <div className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
                             {customer.idNumber && <span>ת.ז: {highlightText(customer.idNumber, searchQuery)}</span>}
+                            {customer.phone && (
+                              <>
+                                <span>•</span>
+                                <span dir="ltr">{highlightText(customer.phone, searchQuery)}</span>
+                              </>
+                            )}
                             {customer.mobile1 && (
                               <>
                                 <span>•</span>
                                 <span dir="ltr">{highlightText(customer.mobile1, searchQuery)}</span>
+                              </>
+                            )}
+                            {customer.mobile2 && (
+                              <>
+                                <span>•</span>
+                                <span dir="ltr">{highlightText(customer.mobile2, searchQuery)}</span>
                               </>
                             )}
                             {customer.city && (

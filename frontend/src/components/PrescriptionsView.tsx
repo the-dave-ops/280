@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Search, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import Fuse from 'fuse.js';
 import { prescriptionsApi } from '../api/prescriptions';
 import { customersApi } from '../api/customers';
 import type { Prescription, Customer } from '../types';
@@ -72,24 +73,46 @@ export function PrescriptionsView({ onPrescriptionSelect }: PrescriptionsViewPro
     }
   };
 
+  // Create Fuse.js instance for fast searching
+  const prescriptionsFuse = useMemo(() => {
+    if (prescriptions.length === 0) return null;
+    
+    // Prepare data for Fuse.js with flattened customer fields
+    const searchableData = prescriptions.map(p => ({
+      ...p,
+      customerFirstName: p.customer?.firstName || '',
+      customerLastName: p.customer?.lastName || '',
+      customerFullName: `${p.customer?.firstName || ''} ${p.customer?.lastName || ''}`.trim(),
+      customerIdNumber: p.customer?.idNumber || '',
+      prescriptionNumberStr: p.prescriptionNumber?.toString() || '',
+    }));
+
+    return new Fuse(searchableData, {
+      keys: [
+        { name: 'prescriptionNumberStr', weight: 3 },
+        { name: 'customerFirstName', weight: 2 },
+        { name: 'customerLastName', weight: 2 },
+        { name: 'customerFullName', weight: 2.5 },
+        { name: 'customerIdNumber', weight: 1.5 },
+        { name: 'type', weight: 1 },
+        { name: 'healthFund', weight: 0.8 },
+      ],
+      threshold: 0.3,
+      ignoreLocation: true,
+      minMatchCharLength: 1,
+    });
+  }, [prescriptions]);
+
   // Filter prescriptions based on search query
   const filteredPrescriptions = useMemo(() => {
-    let filtered = prescriptions.filter((prescription) => {
-      if (!searchQuery.trim()) return true;
+    let filtered = prescriptions;
 
-      const query = searchQuery.toLowerCase();
-      const customerName = `${prescription.customer?.firstName || ''} ${prescription.customer?.lastName || ''}`.toLowerCase();
-      const idNumber = prescription.customer?.idNumber?.toLowerCase() || '';
-      const type = prescription.type.toLowerCase();
-      const prescriptionNumber = prescription.prescriptionNumber?.toString() || '';
-
-      return (
-        customerName.includes(query) ||
-        idNumber.includes(query) ||
-        type.includes(query) ||
-        prescriptionNumber.includes(query)
-      );
-    });
+    // Fast search with Fuse.js
+    if (searchQuery.trim() && prescriptionsFuse) {
+      filtered = prescriptionsFuse
+        .search(searchQuery)
+        .map(result => result.item);
+    }
 
     // Sort prescriptions
     if (sortColumn && sortDirection) {
