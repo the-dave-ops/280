@@ -17,6 +17,7 @@ import campaignsRouter from './routes/campaigns';
 import usersRouter from './routes/users';
 import auditLogsRouter from './routes/auditLogs';
 import reportsRouter from './routes/reports';
+import searchRouter from './routes/search';
 import { requireAuth } from './middleware/auth';
 
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/campaigns', requireAuth, campaignsRouter);
 app.use('/api/users', requireAuth, usersRouter);
 app.use('/api/audit-logs', requireAuth, auditLogsRouter);
 app.use('/api/reports', requireAuth, reportsRouter);
+app.use('/api/search', requireAuth, searchRouter);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
-import { SearchBar } from './components/SearchBar';
 import { CustomerPanel } from './components/CustomerPanel';
 import { PasswordModal } from './components/PasswordModal';
 import { PrescriptionsScrollCards } from './components/PrescriptionsScrollCards';
@@ -15,6 +14,7 @@ import { CustomersView } from './components/CustomersView';
 import { PrescriptionsView } from './components/PrescriptionsView';
 import { ReportsView } from './components/ReportsView';
 import { LoginButton } from './components/LoginButton';
+import { GlobalSearch } from './components/GlobalSearch';
 import { useAuth } from './contexts/AuthContext';
 import { customersApi } from './api/customers';
 import type { Customer, Prescription } from './types';
@@ -351,7 +351,12 @@ onDuplicate={async (customer) => {
           <div className="max-w-7xl mx-auto px-4 py-1.5">
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <SearchBar onCustomerSelect={handleCustomerSelect} />
+                <GlobalSearch
+                  onCustomerSelect={handleCustomerSelect}
+                  onPrescriptionSelect={(prescription) => {
+                    setSelectedPrescription(prescription);
+                  }}
+                />
               </div>
               <button
                 onClick={() => {
